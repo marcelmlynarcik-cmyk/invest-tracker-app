@@ -27,7 +27,7 @@ export function TabsHandler({ children }: { children: React.ReactNode }) {
         <h1 className="mb-4 text-2xl font-bold">{tabTitles[activeTab]}</h1>
 
         {/* {activeTab === "overview" && <OverviewTab />} */}
-        {activeTab === "portfolio" && <PortfolioTab />}
+        {/* {activeTab === "portfolio" && <PortfolioTab />} */}
         {/* {activeTab === "buy-tip" && <BuyTipTab />} */}
         {activeTab === "transactions" && children}
         {activeTab === "weekly-value" && <WeeklyValueTab />}
