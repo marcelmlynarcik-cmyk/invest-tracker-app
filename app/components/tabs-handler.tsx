@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { BottomNav } from "@/app/components/bottom-nav"
-import { OverviewTab } from "@/app/components/overview-tab"
+// import { OverviewTab } from "@/app/components/overview-tab"
 // import { PortfolioTab } from "@/app/components/portfolio-tab"
-import { BuyTipTab } from "@/app/components/buy-tip-tab"
-import { PerformanceTab } from "@/app/components/performance-tab"
+// import { BuyTipTab } from "@/app/components/buy-tip-tab"
+// import { PerformanceTab } from "@/app/components/performance-tab"
 import { WeeklyValueTab } from "@/app/components/weekly-value-tab"
 
 const tabTitles: Record<string, string> = {
@@ -26,12 +26,12 @@ export function TabsHandler({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth scrollbar-hide px-4 py-4 pb-28">
         <h1 className="mb-4 text-2xl font-bold">{tabTitles[activeTab]}</h1>
 
-        {activeTab === "overview" && <OverviewTab />}
-        {/* {activeTab === "portfolio" && <PortfolioTab />} */}
-        {activeTab === "buy-tip" && <BuyTipTab />}
+        {/* {activeTab === "overview" && <OverviewTab />} */}
+        {activeTab === "portfolio" && <PortfolioTab />}
+        {/* {activeTab === "buy-tip" && <BuyTipTab />} */}
         {activeTab === "transactions" && children}
         {activeTab === "weekly-value" && <WeeklyValueTab />}
-        {activeTab === "performance" && <PerformanceTab />}
+        {/* {activeTab === "performance" && <PerformanceTab />} */}
       </main>
 
       {/* Bottom Navigation with safe area */}
