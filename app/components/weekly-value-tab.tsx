@@ -26,7 +26,7 @@ export function WeeklyValueTab() {
     setLoading(true)
     const { data, error } = await supabase.from("weekly_portfolio_values").select().order('date', { ascending: false })
     if (error) {
-      console.error("Error fetching weekly values:", error)
+      console.error("Error fetching weekly values:", error.message, error.details)
     } else if (data) {
       setWeeklyValues(data as WeeklyValue[])
     }
@@ -48,7 +48,7 @@ export function WeeklyValueTab() {
     ])
 
     if (error) {
-      console.error("Error adding weekly value:", error)
+      console.error("Error adding weekly value:", error.message, error.details)
     } else {
       setValue("")
       setDate(new Date().toISOString().slice(0, 10))
