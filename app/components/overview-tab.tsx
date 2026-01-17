@@ -103,7 +103,7 @@ export function OverviewTab() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className={profitPercentage > 0 ? "text-green-500" : profitPercentage < 0 ? "text-red-500" : ""}>
+            <CardTitle className={parseFloat(profitPercentage) > 0 ? "text-green-500" : parseFloat(profitPercentage) < 0 ? "text-red-500" : ""}>
               {profitPercentage}%
             </CardTitle>
             <CardDescription>Zisk %</CardDescription>
