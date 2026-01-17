@@ -22,6 +22,7 @@ import {
 
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
+import { ThemeToggle } from "@/components/theme-toggle" // Import ThemeToggle
 
 export function OverviewTab() {
   const [loading, setLoading] = useState(true)
@@ -66,7 +67,7 @@ export function OverviewTab() {
   }, [])
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Načítava sa...</div>
   }
 
   const totalInvested = calculateTotalInvested(transactions)
@@ -78,58 +79,74 @@ export function OverviewTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end mb-4"> {/* Container for ThemeToggle */}
+        <ThemeToggle />
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>{formatCZK(totalValue)}</CardTitle>
-            <CardDescription>Total Portfolio Value</CardDescription>
+            <CardDescription>Celková hodnota portfólia</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>{formatCZK(totalInvested)}</CardTitle>
-            <CardDescription>Total Invested</CardDescription>
+            <CardDescription>Celkovo investované</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>{formatCZK(totalProfit)}</CardTitle>
-            <CardDescription>Total Profit</CardDescription>
+            <CardDescription>Celkový zisk</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{profitPercentage}%</CardTitle>
-            <CardDescription>Profit %</CardDescription>
+            <CardTitle className={profitPercentage > 0 ? "text-green-500" : profitPercentage < 0 ? "text-red-500" : ""}>
+              {profitPercentage}%
+            </CardTitle>
+            <CardDescription>Zisk %</CardDescription>
           </CardHeader>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Portfolio Evolution</CardTitle>
+          <CardTitle>Vývoj portfólia</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={monthlyEvolutionData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(tick) => new Date(tick).toLocaleDateString("en-GB", { month: "short", year: "2-digit" })}
+                interval="preserveStartEnd"
+                minTickGap={10}
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis
+                tickFormatter={(tick) => formatCZK(tick)}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+                tick={{ fontSize: 10 }}
+              />
               <Tooltip formatter={(value: number) => formatCZK(value)} />
-              <Legend />
+              <Legend layout="horizontal" align="center" verticalAlign="top" wrapperStyle={{ fontSize: 10 }} />
               <Area
                 type="monotone"
                 dataKey="portfolio_value"
                 stroke="#8884d8"
                 fill="#8884d8"
-                name="Portfolio Value"
+                name="Hodnota portfólia"
               />
               <Area
                 type="monotone"
                 dataKey="total_invested"
                 stroke="#82ca9d"
                 fill="#82ca9d"
-                name="Total Invested"
+                name="Celkovo investované"
               />
             </AreaChart>
           </ResponsiveContainer>

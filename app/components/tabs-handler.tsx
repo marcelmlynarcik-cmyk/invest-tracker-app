@@ -9,12 +9,12 @@ import { PerformanceTab } from "@/app/components/performance-tab"
 import { WeeklyValueTab } from "@/app/components/weekly-value-tab"
 
 const tabTitles: Record<string, string> = {
-  overview: "Overview",
-  portfolio: "Portfolio",
-  "buy-tip": "Buy Tip",
-  transactions: "Transactions",
-  "weekly-value": "Weekly Value",
-  performance: "Performance",
+  overview: "Prehľad",
+  portfolio: "Portfólio",
+  "buy-tip": "Tip na nákup",
+  transactions: "Transakcie",
+  "weekly-value": "Týždenná hodnota",
+  performance: "Výkonnosť",
 }
 
 export function TabsHandler({ children }: { children: React.ReactNode }) {

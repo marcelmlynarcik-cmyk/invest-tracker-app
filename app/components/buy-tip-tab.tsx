@@ -4,10 +4,10 @@ export function BuyTipTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Investment Tip</CardTitle>
+        <CardTitle>Investičný tip</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>Based on our analysis, we recommend buying more NVDA stock.</p>
+        <p>Na základe našej analýzy odporúčame kúpiť viac akcií NVDA.</p>
       </CardContent>
     </Card>
   )

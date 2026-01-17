@@ -31,7 +31,7 @@ export function AddTransactionForm() {
     ])
 
     if (error) {
-      console.error("Error adding transaction:", error)
+      console.error("Chyba pri pridávaní transakcie:", error)
     } else {
       setAmount("")
       setDate(new Date().toISOString().slice(0, 10))
@@ -42,7 +42,7 @@ export function AddTransactionForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add Transaction</CardTitle>
+        <CardTitle>Pridať transakciu</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -52,18 +52,18 @@ export function AddTransactionForm() {
               variant={transactionType === "deposit" ? "default" : "outline"}
               onClick={() => setTransactionType("deposit")}
             >
-              Deposit
+              Vklad
             </Button>
             <Button
               type="button"
               variant={transactionType === "withdraw" ? "default" : "outline"}
               onClick={() => setTransactionType("withdraw")}
             >
-              Withdraw
+              Výber
             </Button>
           </div>
           <div>
-            <Label htmlFor="amount">Amount (CZK)</Label>
+            <Label htmlFor="amount">Čiastka (CZK)</Label>
             <Input
               id="amount"
               type="number"
@@ -73,7 +73,7 @@ export function AddTransactionForm() {
             />
           </div>
           <div>
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Dátum</Label>
             <Input
               id="date"
               type="date"
@@ -82,7 +82,7 @@ export function AddTransactionForm() {
               required
             />
           </div>
-          <Button type="submit">Add Transaction</Button>
+          <Button type="submit">Pridať transakciu</Button>
         </form>
       </CardContent>
     </Card>

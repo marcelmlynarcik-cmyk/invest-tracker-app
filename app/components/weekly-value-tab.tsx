@@ -26,7 +26,7 @@ export function WeeklyValueTab() {
     setLoading(true)
     const { data, error } = await supabase.from("weekly_portfolio_values").select().order('date', { ascending: false })
     if (error) {
-      console.error("Error fetching weekly values:", error)
+      console.error("Chyba pri načítaní týždenných hodnôt:", error)
     } else if (data) {
       setWeeklyValues(data as WeeklyValue[])
     }
@@ -48,7 +48,7 @@ export function WeeklyValueTab() {
     ])
 
     if (error) {
-      console.error("Error adding weekly value:", error)
+      console.error("Chyba pri pridávaní týždennej hodnoty:", error)
     } else {
       setValue("")
       setDate(new Date().toISOString().slice(0, 10))
@@ -58,19 +58,19 @@ export function WeeklyValueTab() {
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Načítava sa...</div>
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Add Weekly Portfolio Value</CardTitle>
+          <CardTitle>Pridať týždennú hodnotu portfólia</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="value">Value (CZK)</Label>
+              <Label htmlFor="value">Hodnota (CZK)</Label>
               <Input
                 id="value"
                 type="number"
@@ -80,7 +80,7 @@ export function WeeklyValueTab() {
               />
             </div>
             <div>
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Dátum</Label>
               <Input
                 id="date"
                 type="date"
@@ -89,18 +89,18 @@ export function WeeklyValueTab() {
                 required
               />
             </div>
-            <Button type="submit">Add Value</Button>
+            <Button type="submit">Pridať hodnotu</Button>
           </form>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Historical Weekly Values</CardTitle>
+          <CardTitle>Historické týždenné hodnoty</CardTitle>
         </CardHeader>
         <CardContent>
           {weeklyValues.length === 0 ? (
-            <p>No weekly values recorded yet.</p>
+            <p>Zatiaľ neboli zaznamenané žiadne týždenné hodnoty.</p>
           ) : (
             <div className="space-y-2">
               {weeklyValues.map((wv) => (

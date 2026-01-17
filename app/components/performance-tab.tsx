@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
 import { Transaction, WeeklyValue } from "@/lib/types"
 import { formatCZK, getPerformanceMetrics } from "@/lib/utils"
+import { format, getWeek } from 'date-fns';
 
 export function PerformanceTab() {
   const [loading, setLoading] = useState(true)
@@ -28,7 +29,7 @@ export function PerformanceTab() {
     async function fetchData() {
       const { data: transactionsData, error: transactionsError } = await supabase.from("transactions").select()
       if (transactionsError) {
-        console.error("Error fetching transactions:", transactionsError)
+        console.error("Chyba pri načítaní transakcií:", transactionsError)
       } else if (transactionsData) {
         setTransactions(transactionsData as Transaction[])
       }
@@ -38,7 +39,7 @@ export function PerformanceTab() {
         .select()
         .order("date", { ascending: true })
       if (allWeeklyValuesError) {
-        console.error("Error fetching all weekly values:", allWeeklyValuesError)
+        console.error("Chyba pri načítaní všetkých týždenných hodnôt:", allWeeklyValuesError)
       } else if (allWeeklyValuesData) {
         setAllWeeklyValues(allWeeklyValuesData as WeeklyValue[])
       }
@@ -48,7 +49,7 @@ export function PerformanceTab() {
   }, [])
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Načítava sa...</div>
   }
 
   const { weeklyPerformance, monthlyPerformance } = getPerformanceMetrics(transactions, allWeeklyValues)
@@ -57,16 +58,29 @@ export function PerformanceTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Performance</CardTitle>
+          <CardTitle>Týždenná výkonnosť</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={weeklyPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(tick) => {
+                  return tick.replace(' ', '-'); // e.g., W03 2026 -> W03-2026
+                }}
+                interval="preserveStartEnd"
+                minTickGap={10}
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis
+                tickFormatter={(tick) => formatCZK(tick)}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+                tick={{ fontSize: 10 }}
+              />
               <Tooltip formatter={(value: number) => formatCZK(value)} />
-              <Legend />
+              <Legend layout="horizontal" align="center" verticalAlign="top" wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
@@ -74,16 +88,29 @@ export function PerformanceTab() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Performance</CardTitle>
+          <CardTitle>Mesačná výkonnosť</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(tick) => {
+                  return tick; // Should be YYYY-MM now
+                }}
+                interval="preserveStartEnd"
+                minTickGap={10}
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis
+                tickFormatter={(tick) => formatCZK(tick)}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+                tick={{ fontSize: 10 }}
+              />
               <Tooltip formatter={(value: number) => formatCZK(value)} />
-              <Legend />
+              <Legend layout="horizontal" align="center" verticalAlign="top" wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="value" fill="#82ca9d" />
             </BarChart>
           </ResponsiveContainer>

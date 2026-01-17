@@ -55,7 +55,7 @@ export function PortfolioTab() {
     const { data: stocksData, error } = await supabase.from("user_stocks").select("*")
 
     if (error) {
-      console.error("Error fetching user stocks:", error)
+      console.error("Chyba pri načítaní akcií používateľa:", error)
       setLoading(false)
       return
     }
@@ -138,7 +138,7 @@ export function PortfolioTab() {
       console.log("debouncedSearchTerm (after String()):", searchKeywords);
 
       if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) {
-        console.error("Finnhub API key is not set in environment variables. Cannot perform stock search.");
+        console.error("API kľúč Finnhub nie je nastavený v premenných prostredia. Vyhľadávanie akcií nemožno vykonať.");
         setSearchResults(null);
         return;
       }
@@ -150,10 +150,10 @@ export function PortfolioTab() {
           if (results) {
             setSearchResults(results)
           } else {
-            console.warn("searchStockSymbols returned no results or an empty array.");
+            console.warn("searchStockSymbols nevrátil žiadne výsledky alebo prázdne pole.");
           }
         } catch (e) {
-          console.error("Error calling searchStockSymbols:", e);
+          console.error("Chyba pri volaní searchStockSymbols:", e);
           setSearchResults(null);
         }
       } else {
@@ -171,7 +171,7 @@ export function PortfolioTab() {
     console.log("avgPrice:", avgPrice);
 
     if (!selectedStock || !shares || !avgPrice) {
-      console.log("Validation failed: selectedStock, shares, or avgPrice is missing.");
+      console.log("Overenie zlyhalo: chýba vybraná akcia, počet kusov alebo priemerná cena.");
       return
     }
 
@@ -186,9 +186,9 @@ export function PortfolioTab() {
     const { error } = await supabase.from("user_stocks").insert([newStock])
 
     if (error) {
-      console.error("Error adding/updating stock to Supabase:", error)
+      console.error("Chyba pri pridávaní/aktualizácii akcie do Supabase:", error)
     } else {
-      console.log("Stock added/updated successfully.");
+      console.log("Akcia bola úspešne pridaná/aktualizovaná.");
       setSearchTerm("")
       setSearchResults(null)
       setSelectedStock(null)
@@ -201,24 +201,24 @@ export function PortfolioTab() {
   }
 
   if (loading) {
-    return <div>Loading portfolio...</div>
+    return <div>Načítava sa portfólio...</div>
   }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Add/Update Stock</CardTitle>
-          <CardDescription>Search for a stock and add your holdings.</CardDescription>
+          <CardTitle>Pridať/Aktualizovať akciu</CardTitle>
+          <CardDescription>Vyhľadajte akciu a pridajte svoje podiely.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAddOrUpdateStock} className="space-y-4">
             <div>
-              <Label htmlFor="stock-search">Stock Ticker</Label>
+              <Label htmlFor="stock-search">Ticker akcie</Label>
               <Input
                 id="stock-search"
                 type="text"
-                placeholder="Search by symbol or name (e.g., AAPL, Apple Inc.)"
+                placeholder="Vyhľadajte podľa symbolu alebo názvu (napr. AAPL, Apple Inc.)"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value)
@@ -244,12 +244,12 @@ export function PortfolioTab() {
                 </div>
               )}
               {selectedStock && (
-                <p className="mt-2 text-sm text-muted-foreground">Selected: {selectedStock.name} ({selectedStock.symbol}) - {selectedStock.currency}</p>
+                <p className="mt-2 text-sm text-muted-foreground">Vybrané: {selectedStock.name} ({selectedStock.symbol}) - {selectedStock.currency}</p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="shares">Number of Shares</Label>
+              <Label htmlFor="shares">Počet kusov</Label>
               <Input
                 id="shares"
                 type="number"
@@ -260,7 +260,7 @@ export function PortfolioTab() {
               />
             </div>
             <div>
-              <Label htmlFor="avg-price">Average Purchase Price ({selectedStock?.currency || "USD"})</Label>
+              <Label htmlFor="avg-price">Priemerná nákupná cena ({selectedStock?.currency || "USD"})</Label>
               <Input
                 id="avg-price"
                 type="number"
@@ -273,7 +273,7 @@ export function PortfolioTab() {
             <Button type="submit" disabled={!selectedStock || isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add/Update Stock
+              Pridať/Aktualizovať akciu
             </Button>
           </form>
         </CardContent>
@@ -282,20 +282,20 @@ export function PortfolioTab() {
       {userStocks.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>My Holdings</CardTitle>
+            <CardTitle>Moje podiely</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Ticker</TableHead>
-                  <TableHead>Shares</TableHead>
-                  <TableHead>Avg Price (CZK)</TableHead>
-                  <TableHead>Current Price (CZK)</TableHead>
-                  <TableHead>Current Value (CZK)</TableHead>
-                  <TableHead>Profit (CZK)</TableHead>
-                  <TableHead>Profit (%)</TableHead>
-                  <TableHead>Weight (%)</TableHead>
+                  <TableHead>Kusy</TableHead>
+                  <TableHead>Priemerná cena (CZK)</TableHead>
+                  <TableHead>Aktuálna cena (CZK)</TableHead>
+                  <TableHead>Aktuálna hodnota (CZK)</TableHead>
+                  <TableHead>Zisk (CZK)</TableHead>
+                  <TableHead>Zisk (%)</TableHead>
+                  <TableHead>Váha (%)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -306,8 +306,12 @@ export function PortfolioTab() {
                     <TableCell>{formatCZK(stock.avg_price * (stock.conversionRate || 1))}</TableCell>
                     <TableCell>{formatCZK(stock.currentPriceCZK)}</TableCell>
                     <TableCell>{formatCZK(stock.currentValueCZK)}</TableCell>
-                    <TableCell>{formatCZK(stock.profitCZK)}</TableCell>
-                    <TableCell>{stock.profitPercentage.toFixed(2)}%</TableCell>
+                    <TableCell className={stock.profitCZK > 0 ? "text-green-500" : stock.profitCZK < 0 ? "text-red-500" : ""}>
+                      {formatCZK(stock.profitCZK)}
+                    </TableCell>
+                    <TableCell className={stock.profitPercentage > 0 ? "text-green-500" : stock.profitPercentage < 0 ? "text-red-500" : ""}>
+                      {stock.profitPercentage.toFixed(2)}%
+                    </TableCell>
                     <TableCell>{stock.weightInPortfolio.toFixed(2)}%</TableCell>
                   </TableRow>
                 ))}

@@ -9,12 +9,12 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "portfolio", label: "Portfolio", icon: PieChart },
+  { id: "overview", label: "Prehľad", icon: LayoutDashboard },
+  { id: "portfolio", label: "Portfólio", icon: PieChart },
   { id: "buy-tip", label: "Tip", icon: Lightbulb },
-  { id: "transactions", label: "History", icon: Receipt },
-  { id: "weekly-value", label: "Weekly", icon: CalendarDays },
-  { id: "performance", label: "Stats", icon: TrendingUp },
+  { id: "transactions", label: "História", icon: Receipt },
+  { id: "weekly-value", label: "Týždenne", icon: CalendarDays },
+  { id: "performance", label: "Štatistiky", icon: TrendingUp },
 ]
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {

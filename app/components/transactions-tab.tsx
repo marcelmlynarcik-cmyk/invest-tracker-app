@@ -15,7 +15,7 @@ export async function TransactionsTab() {
 
   if (error) {
     console.error("Error fetching transactions:", error)
-    return <div>Error fetching transactions</div>
+    return <div>Chyba pri načítaní transakcií</div>
   }
 
   return (
@@ -24,11 +24,13 @@ export async function TransactionsTab() {
       {transactions.map((tx: Transaction) => (
         <Card key={tx.id}>
           <CardHeader>
-            <CardTitle className="capitalize">{tx.type}</CardTitle>
+            <CardTitle className={`capitalize ${tx.type === "deposit" ? "text-green-500" : "text-red-500"}`}>
+              {tx.type}
+            </CardTitle>
             <CardDescription>{tx.date}</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Amount: {formatCZK(tx.amount)}</p>
+            <p>Čiastka: {formatCZK(tx.amount)}</p>
           </CardContent>
         </Card>
       ))}

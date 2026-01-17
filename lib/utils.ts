@@ -80,6 +80,8 @@ export function getMonthlyPortfolioEvolution(
 }
 
 // Helper function to get week number
+import { format, getWeek } from 'date-fns'; // Add this import
+
 function getWeekNumber(d: Date): string {
   // Copy date so don't modify original
   d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -103,7 +105,7 @@ export function getPerformanceMetrics(
   // Sort weekly values by date
   weeklyValues.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-  // Calculate weekly performance
+  // Calculate weekly and monthly performance
   for (let i = 1; i < weeklyValues.length; i++) {
     const currentWeek = weeklyValues[i]
     const previousWeek = weeklyValues[i - 1]
@@ -123,22 +125,18 @@ export function getPerformanceMetrics(
     })
 
     const performance = (currentWeek.value - previousWeek.value) - netInvestmentInWeek
-    // Format date to week number and year
-    weeklyPerformanceMap[getWeekNumber(new Date(currentWeek.date))] = performance
-  }
+    
+    // Aggregate weekly performance
+    const weekKey = getWeekNumber(new Date(currentWeek.date));
+    weeklyPerformanceMap[weekKey] = performance;
 
-  // Aggregate weekly performance into monthly performance
-  Object.keys(weeklyPerformanceMap).forEach(dateString => {
-    const month = dateString.slice(0, 7) // YYYY-MM (assuming format from week number is not used here)
-    if (!monthlyPerformanceMap[month]) {
-      monthlyPerformanceMap[month] = 0
+    // Aggregate monthly performance using the actual month of the current week
+    const monthKey = format(new Date(currentWeek.date), 'yyyy-MM');
+    if (!monthlyPerformanceMap[monthKey]) {
+      monthlyPerformanceMap[monthKey] = 0;
     }
-    // This part might need adjustment if monthlyPerformanceMap key was also changed to week number
-    // For now, assuming dateString is still a full date string or the month part can be extracted.
-    // If weeklyPerformanceMap keys are "WXX YYYY", then slicing will be incorrect.
-    // Let's assume for now, it's fine for monthly aggregation.
-    monthlyPerformanceMap[month] += weeklyPerformanceMap[dateString]
-  })
+    monthlyPerformanceMap[monthKey] += performance;
+  }
 
   const weeklyPerformance = Object.keys(weeklyPerformanceMap).map(dateString => ({
     date: dateString,
