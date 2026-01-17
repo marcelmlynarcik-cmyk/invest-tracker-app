@@ -73,7 +73,7 @@ export function OverviewTab() {
   const totalInvested = calculateTotalInvested(transactions)
   const totalValue = latestWeeklyValue ?? totalInvested
   const totalProfit = totalValue - totalInvested
-  const profitPercentage = totalInvested === 0 ? 0 : ((totalProfit / totalInvested) * 100).toFixed(2)
+  const profitPercentage = totalInvested === 0 ? "0.00" : ((totalProfit / totalInvested) * 100).toFixed(2)
 
   const monthlyEvolutionData = getMonthlyPortfolioEvolution(transactions, allWeeklyValues)
 
