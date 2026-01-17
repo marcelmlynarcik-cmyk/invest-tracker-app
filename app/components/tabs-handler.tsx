@@ -6,12 +6,14 @@ import { OverviewTab } from "@/app/components/overview-tab"
 import { PortfolioTab } from "@/app/components/portfolio-tab"
 import { BuyTipTab } from "@/app/components/buy-tip-tab"
 import { PerformanceTab } from "@/app/components/performance-tab"
+import { WeeklyValueTab } from "@/app/components/weekly-value-tab"
 
 const tabTitles: Record<string, string> = {
   overview: "Overview",
   portfolio: "Portfolio",
   "buy-tip": "Buy Tip",
   transactions: "Transactions",
+  "weekly-value": "Weekly Value",
   performance: "Performance",
 }
 
@@ -28,6 +30,7 @@ export function TabsHandler({ children }: { children: React.ReactNode }) {
         {activeTab === "portfolio" && <PortfolioTab />}
         {activeTab === "buy-tip" && <BuyTipTab />}
         {activeTab === "transactions" && children}
+        {activeTab === "weekly-value" && <WeeklyValueTab />}
         {activeTab === "performance" && <PerformanceTab />}
       </main>
 

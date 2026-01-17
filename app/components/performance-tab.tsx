@@ -4,7 +4,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { weeklyPerformance, monthlyPerformance } from "@/lib/mock-data"
 import {
   Bar,
   BarChart,
@@ -15,8 +14,45 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { supabase } from "@/lib/supabase"
+import { useEffect, useState } from "react"
+import { Transaction, WeeklyValue } from "@/lib/types"
+import { formatCZK, getPerformanceMetrics } from "@/lib/utils"
 
 export function PerformanceTab() {
+  const [loading, setLoading] = useState(true)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [allWeeklyValues, setAllWeeklyValues] = useState<WeeklyValue[]>([])
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: transactionsData, error: transactionsError } = await supabase.from("transactions").select()
+      if (transactionsError) {
+        console.error("Error fetching transactions:", transactionsError)
+      } else if (transactionsData) {
+        setTransactions(transactionsData as Transaction[])
+      }
+
+      const { data: allWeeklyValuesData, error: allWeeklyValuesError } = await supabase
+        .from("weekly_portfolio_values")
+        .select()
+        .order("date", { ascending: true })
+      if (allWeeklyValuesError) {
+        console.error("Error fetching all weekly values:", allWeeklyValuesError)
+      } else if (allWeeklyValuesData) {
+        setAllWeeklyValues(allWeeklyValuesData as WeeklyValue[])
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  const { weeklyPerformance, monthlyPerformance } = getPerformanceMetrics(transactions, allWeeklyValues)
+
   return (
     <div className="space-y-4">
       <Card>
@@ -27,9 +63,9 @@ export function PerformanceTab() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={weeklyPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
+              <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => formatCZK(value)} />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
@@ -44,9 +80,9 @@ export function PerformanceTab() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => formatCZK(value)} />
               <Legend />
               <Bar dataKey="value" fill="#82ca9d" />
             </BarChart>

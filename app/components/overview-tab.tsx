@@ -5,12 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  calculatePortfolioStats,
-  portfolioHistory,
-  Stock,
-} from "@/lib/mock-data"
-import { formatCZK } from "@/lib/utils"
+
+import { formatCZK, calculateTotalInvested, getMonthlyPortfolioEvolution } from "@/lib/utils"
+import { Transaction, WeeklyValue } from "@/lib/types"
+
 import {
   Area,
   AreaChart,
@@ -21,88 +19,121 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
 
 export function OverviewTab() {
-  const [stocks, setStocks] = useState<Stock[]>([])
   const [loading, setLoading] = useState(true)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [latestWeeklyValue, setLatestWeeklyValue] = useState<number | null>(null)
+
+  const [allWeeklyValues, setAllWeeklyValues] = useState<WeeklyValue[]>([])
 
   useEffect(() => {
-    async function getStocks() {
-      const { data, error } = await supabase.from("stocks").select()
-      if (error) {
-        console.error("Error fetching stocks:", error)
-      } else if (data) {
-        const mappedData = data.map(stock => ({...stock, avgPrice: stock.avg_price, currentPrice: stock.current_price, purchaseDate: stock.purchase_date, id: stock.id.toString()}))
-        setStocks(mappedData)
+    async function fetchData() {
+      const { data: transactionsData, error: transactionsError } = await supabase.from("transactions").select()
+      if (transactionsError) {
+        console.error("Error fetching transactions:", transactionsError)
+      } else if (transactionsData) {
+        setTransactions(transactionsData as Transaction[])
       }
+
+      const { data: allWeeklyValuesData, error: allWeeklyValuesError } = await supabase
+        .from("weekly_portfolio_values")
+        .select()
+        .order("date", { ascending: true })
+      if (allWeeklyValuesError) {
+        console.error("Error fetching all weekly values:", allWeeklyValuesError)
+      } else if (allWeeklyValuesData) {
+        setAllWeeklyValues(allWeeklyValuesData as WeeklyValue[])
+      }
+
+      const { data: latestWeeklyValueData, error: latestWeeklyValueError } = await supabase
+        .from("weekly_portfolio_values")
+        .select("value")
+        .order("date", { ascending: false })
+        .limit(1)
+      if (latestWeeklyValueError) {
+        console.error("Error fetching latest weekly value:", latestWeeklyValueError)
+      } else if (latestWeeklyValueData && latestWeeklyValueData.length > 0) {
+        setLatestWeeklyValue(latestWeeklyValueData[0].value)
+      }
+
       setLoading(false)
     }
-    getStocks()
+    fetchData()
   }, [])
 
   if (loading) {
     return <div>Loading...</div>
   }
 
-  const stats = calculatePortfolioStats(stocks)
+  const totalInvested = calculateTotalInvested(transactions)
+  const totalValue = latestWeeklyValue ?? totalInvested
+  const totalProfit = totalValue - totalInvested
+  const profitPercentage = totalInvested === 0 ? 0 : ((totalProfit / totalInvested) * 100).toFixed(2)
+
+  const monthlyEvolutionData = getMonthlyPortfolioEvolution(transactions, allWeeklyValues)
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle>{formatCZK(stats.totalValue)}</CardTitle>
+            <CardTitle>{formatCZK(totalValue)}</CardTitle>
             <CardDescription>Total Portfolio Value</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{formatCZK(stats.totalInvested)}</CardTitle>
+            <CardTitle>{formatCZK(totalInvested)}</CardTitle>
             <CardDescription>Total Invested</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{formatCZK(stats.totalProfit)}</CardTitle>
+            <CardTitle>{formatCZK(totalProfit)}</CardTitle>
             <CardDescription>Total Profit</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{stats.profitPercentage}%</CardTitle>
+            <CardTitle>{profitPercentage}%</CardTitle>
             <CardDescription>Profit %</CardDescription>
           </CardHeader>
         </Card>
       </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Portfolio History</CardTitle>
+          <CardTitle>Portfolio Evolution</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={portfolioHistory}>
+            <AreaChart data={monthlyEvolutionData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => formatCZK(value)} />
               <Legend />
               <Area
                 type="monotone"
-                dataKey="value"
+                dataKey="portfolio_value"
                 stroke="#8884d8"
                 fill="#8884d8"
+                name="Portfolio Value"
               />
               <Area
                 type="monotone"
-                dataKey="invested"
+                dataKey="total_invested"
                 stroke="#82ca9d"
                 fill="#82ca9d"
+                name="Total Invested"
               />
             </AreaChart>
           </ResponsiveContainer>
-        </CardContent>.
+        </CardContent>
       </Card>
     </div>
   )

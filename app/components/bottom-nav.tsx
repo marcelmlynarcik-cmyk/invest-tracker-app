@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, PieChart, Lightbulb, Receipt, TrendingUp } from "lucide-react"
+import { LayoutDashboard, PieChart, Lightbulb, Receipt, TrendingUp, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface BottomNavProps {
@@ -13,6 +13,7 @@ const tabs = [
   { id: "portfolio", label: "Portfolio", icon: PieChart },
   { id: "buy-tip", label: "Tip", icon: Lightbulb },
   { id: "transactions", label: "History", icon: Receipt },
+  { id: "weekly-value", label: "Weekly", icon: CalendarDays },
   { id: "performance", label: "Stats", icon: TrendingUp },
 ]
 
