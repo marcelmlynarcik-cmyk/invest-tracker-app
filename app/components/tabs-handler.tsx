@@ -26,12 +26,12 @@ export function TabsHandler({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth scrollbar-hide px-4 py-4 pb-28">
         <h1 className="mb-4 text-2xl font-bold">{tabTitles[activeTab]}</h1>
 
-        {/* {activeTab === "overview" && <OverviewTab />} */}
-        {/* {activeTab === "portfolio" && <PortfolioTab />} */}
-        {/* {activeTab === "buy-tip" && <BuyTipTab />} */}
+        {activeTab === "overview" && <OverviewTab />}
+        {activeTab === "portfolio" && <PortfolioTab />}
+        {activeTab === "buy-tip" && <BuyTipTab />}
         {activeTab === "transactions" && children}
         {activeTab === "weekly-value" && <WeeklyValueTab />}
-        {/* {activeTab === "performance" && <PerformanceTab />} */}
+        {activeTab === "performance" && <PerformanceTab />}
       </main>
 
       {/* Bottom Navigation with safe area */}
