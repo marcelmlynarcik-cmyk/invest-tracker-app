@@ -14,7 +14,7 @@ export async function TransactionsTab() {
   const { data: transactions, error } = await supabase.from("transactions").select()
 
   if (error) {
-    console.error("Error fetching transactions:", error.message, error.details)
+    console.error("Error fetching transactions:", error)
     return <div>Error fetching transactions</div>
   }
 

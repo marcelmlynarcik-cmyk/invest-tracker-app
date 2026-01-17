@@ -34,7 +34,7 @@ export function OverviewTab() {
     async function fetchData() {
       const { data: transactionsData, error: transactionsError } = await supabase.from("transactions").select()
       if (transactionsError) {
-        console.error("Error fetching transactions:", transactionsError.message, transactionsError.details)
+        console.error("Error fetching transactions:", transactionsError)
       } else if (transactionsData) {
         setTransactions(transactionsData as Transaction[])
       }
@@ -44,7 +44,7 @@ export function OverviewTab() {
         .select()
         .order("date", { ascending: true })
       if (allWeeklyValuesError) {
-        console.error("Error fetching all weekly values:", allWeeklyValuesError.message, allWeeklyValuesError.details)
+        console.error("Error fetching all weekly values:", allWeeklyValuesError)
       } else if (allWeeklyValuesData) {
         setAllWeeklyValues(allWeeklyValuesData as WeeklyValue[])
       }
@@ -55,7 +55,7 @@ export function OverviewTab() {
         .order("date", { ascending: false })
         .limit(1)
       if (latestWeeklyValueError) {
-        console.error("Error fetching latest weekly value:", latestWeeklyValueError.message, latestWeeklyValueError.details)
+        console.error("Error fetching latest weekly value:", latestWeeklyValueError)
       } else if (latestWeeklyValueData && latestWeeklyValueData.length > 0) {
         setLatestWeeklyValue(latestWeeklyValueData[0].value)
       }
