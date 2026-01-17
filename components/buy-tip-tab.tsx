@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Lightbulb, TrendingDown, Scale } from "lucide-react"
-import { mockStocks, calculateStockProfit, formatCZK, calculatePortfolioStats } from "@/lib/mock-data"
+import { formatCZK } from "@/lib/utils"
+import { mockStocks, calculateStockProfit, calculatePortfolioStats } from "@/lib/mock-data"
 
 export function BuyTipTab() {
   // Find the stock with the lowest current profit percentage (best buying opportunity)
