@@ -2,6 +2,7 @@ import { BottomNav } from "@/app/components/bottom-nav"
 import { TabsHandler } from "@/app/components/tabs-handler"
 import { TransactionsTab } from "@/app/components/transactions-tab"
 import { TrendingUp } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle" // Import ThemeToggle
 
 export default function DashboardPage() {
   return (
@@ -15,7 +16,7 @@ export default function DashboardPage() {
             </div>
             <span className="font-semibold text-lg">InvestTracker</span>
           </div>
-          
+          <ThemeToggle /> {/* Placed on the right */}
         </div>
       </header>
 

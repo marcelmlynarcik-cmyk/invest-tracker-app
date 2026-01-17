@@ -22,7 +22,7 @@ import {
 
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
-import { ThemeToggle } from "@/components/theme-toggle" // Import ThemeToggle
+
 
 export function OverviewTab() {
   const [loading, setLoading] = useState(true)
@@ -79,9 +79,7 @@ export function OverviewTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end mb-4"> {/* Container for ThemeToggle */}
-        <ThemeToggle />
-      </div>
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
