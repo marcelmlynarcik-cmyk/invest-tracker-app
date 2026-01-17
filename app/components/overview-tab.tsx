@@ -7,10 +7,10 @@ import {
 } from "@/components/ui/card"
 import {
   calculatePortfolioStats,
-  formatCZK,
   portfolioHistory,
   Stock,
 } from "@/lib/mock-data"
+import { formatCZK } from "@/lib/utils"
 import {
   Area,
   AreaChart,

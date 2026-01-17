@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/card"
 import {
   calculateStockProfit,
-  formatCZK,
   Stock,
 } from "@/lib/mock-data"
+import { formatCZK } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
 

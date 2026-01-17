@@ -1,3 +1,5 @@
+import { Transaction } from "@/lib/types"
+
 export interface Stock {
   id: string
   ticker: string
@@ -8,15 +10,6 @@ export interface Stock {
   purchaseDate: string
 }
 
-export interface Transaction {
-  id: string
-  type: "deposit" | "buy" | "sell"
-  date: string
-  amount: number
-  ticker?: string
-  shares?: number
-  pricePerShare?: number
-}
 
 export const mockStocks: Stock[] = [
   {
@@ -66,17 +59,7 @@ export const mockStocks: Stock[] = [
   },
 ]
 
-export const mockTransactions: Transaction[] = [
-  { id: "1", type: "deposit", date: "2024-01-15", amount: 100000 },
-  { id: "2", type: "buy", date: "2024-01-25", amount: 22000, ticker: "NVDA", shares: 10, pricePerShare: 2200 },
-  { id: "3", type: "deposit", date: "2024-02-10", amount: 80000 },
-  { id: "4", type: "buy", date: "2024-02-20", amount: 73600, ticker: "MSFT", shares: 8, pricePerShare: 9200 },
-  { id: "5", type: "deposit", date: "2024-03-01", amount: 75000 },
-  { id: "6", type: "buy", date: "2024-03-15", amount: 63000, ticker: "AAPL", shares: 15, pricePerShare: 4200 },
-  { id: "7", type: "buy", date: "2024-04-10", amount: 19000, ticker: "GOOGL", shares: 5, pricePerShare: 3800 },
-  { id: "8", type: "deposit", date: "2024-04-20", amount: 50000 },
-  { id: "9", type: "buy", date: "2024-05-05", amount: 39000, ticker: "TSLA", shares: 6, pricePerShare: 6500 },
-]
+
 
 export const portfolioHistory = [
   { date: "Jan", value: 100000, invested: 100000 },
@@ -133,11 +116,4 @@ export function calculateStockProfit(stock: Stock) {
   }
 }
 
-export function formatCZK(amount: number): string {
-  return new Intl.NumberFormat("cs-CZ", {
-    style: "currency",
-    currency: "CZK",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+
