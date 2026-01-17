@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { BottomNav } from "@/app/components/bottom-nav"
 import { OverviewTab } from "@/app/components/overview-tab"
-import { PortfolioTab } from "@/app/components/portfolio-tab"
+// import { PortfolioTab } from "@/app/components/portfolio-tab"
 import { BuyTipTab } from "@/app/components/buy-tip-tab"
 import { PerformanceTab } from "@/app/components/performance-tab"
 import { WeeklyValueTab } from "@/app/components/weekly-value-tab"
@@ -27,7 +27,7 @@ export function TabsHandler({ children }: { children: React.ReactNode }) {
         <h1 className="mb-4 text-2xl font-bold">{tabTitles[activeTab]}</h1>
 
         {activeTab === "overview" && <OverviewTab />}
-        {activeTab === "portfolio" && <PortfolioTab />}
+        {/* {activeTab === "portfolio" && <PortfolioTab />} */}
         {activeTab === "buy-tip" && <BuyTipTab />}
         {activeTab === "transactions" && children}
         {activeTab === "weekly-value" && <WeeklyValueTab />}

@@ -35,6 +35,7 @@ interface EnhancedUserStock extends UserStock {
   profitCZK: number
   profitPercentage: number
   weightInPortfolio: number // Percentage
+  conversionRate?: number // Added to resolve Vercel build error
 }
 
 export function PortfolioTab() {
@@ -136,8 +137,8 @@ export function PortfolioTab() {
       const searchKeywords = String(debouncedSearchTerm); // Ensure it's a string
       console.log("debouncedSearchTerm (after String()):", searchKeywords);
 
-      if (!process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY) {
-        console.error("Alpha Vantage API key is not set in environment variables. Cannot perform stock search.");
+      if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) {
+        console.error("Finnhub API key is not set in environment variables. Cannot perform stock search.");
         setSearchResults(null);
         return;
       }

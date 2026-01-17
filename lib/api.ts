@@ -1,27 +1,25 @@
 import { StockData, ExchangeRateData } from "./types"
 
-const ALPHA_VANTAGE_API_KEY = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY
+const FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY
 const EXCHANGERATE_API_KEY = process.env.NEXT_PUBLIC_EXCHANGERATE_API_KEY
 
 export async function fetchStockPrice(ticker: string): Promise<StockData | null> {
-  if (!ALPHA_VANTAGE_API_KEY) {
-    throw new Error("Alpha Vantage API key is not set.")
+  if (!FINNHUB_API_KEY) {
+    throw new Error("Finnhub API key is not set.")
   }
-  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`
+  const url = `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`
 
   try {
     const response = await fetch(url)
     const data = await response.json()
 
-    if (data["Global Quote"]) {
+    if (data.c && data.c !== 0) { // c is current price, 0 means no data or market closed
       return {
-        symbol: data["Global Quote"]["01. symbol"],
-        price: parseFloat(data["Global Quote"]["05. price"]),
+        symbol: ticker,
+        price: parseFloat(data.c),
       }
-    } else if (data["Error Message"]) {
-      throw new Error(`Alpha Vantage Error for ${ticker}: ${data["Error Message"]}`)
     } else {
-      throw new Error(`Alpha Vantage did not return expected data for ${ticker}: ${JSON.stringify(data)}`)
+      throw new Error(`Finnhub did not return expected data for ${ticker}: ${JSON.stringify(data)}`)
     }
   } catch (error) {
     console.error(`Error fetching stock price for ${ticker}:`, error)
@@ -61,26 +59,26 @@ export async function fetchExchangeRate(
 
 // Function to search for stock symbols (e.g., for an autocomplete input)
 export async function searchStockSymbols(keywords: string): Promise<any[] | null> {
-  if (!ALPHA_VANTAGE_API_KEY) {
-    throw new Error("Alpha Vantage API key is not set.")
+  if (!FINNHUB_API_KEY) {
+    throw new Error("Finnhub API key is not set.")
   }
-  const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${keywords}&apikey=${ALPHA_VANTAGE_API_KEY}`
+  const url = `https://finnhub.io/api/v1/search?q=${keywords}&token=${FINNHUB_API_KEY}`
 
   try {
     const response = await fetch(url)
     const data = await response.json()
 
-    if (data.bestMatches) {
-      return data.bestMatches.map((match: any) => ({
-        symbol: match["1. symbol"],
-        name: match["2. name"],
-        type: match["3. type"],
-        currency: match["8. currency"],
+    if (data.result && data.result.length > 0) {
+      return data.result.map((match: any) => ({
+        symbol: match.symbol,
+        name: match.description,
+        type: match.type,
+        currency: "USD", // Finnhub search doesn't return currency directly, defaulting to USD
       }))
-    } else if (data["Error Message"]) {
-      throw new Error(`Alpha Vantage Error for symbol search: ${data["Error Message"]}`)
+    } else if (data.count === 0) {
+      return [] // No results found
     }
-    throw new Error(`Alpha Vantage did not return expected data for symbol search: ${JSON.stringify(data)}`)
+    throw new Error(`Finnhub did not return expected data for symbol search: ${JSON.stringify(data)}`)
   } catch (error) {
     console.error(`Error searching stock symbols for ${keywords}:`, error)
     return null
