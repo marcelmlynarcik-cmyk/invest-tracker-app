@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { BottomNav } from "@/app/components/bottom-nav"
-// import { OverviewTab } from "@/app/components/overview-tab"
-// import { PortfolioTab } from "@/app/components/portfolio-tab"
-// import { BuyTipTab } from "@/app/components/buy-tip-tab"
-// import { PerformanceTab } from "@/app/components/performance-tab"
+import { OverviewTab } from "@/app/components/overview-tab"
+import { PortfolioTab } from "@/app/components/portfolio-tab"
+import { BuyTipTab } from "@/app/components/buy-tip-tab"
+import { PerformanceTab } from "@/app/components/performance-tab"
 import { WeeklyValueTab } from "@/app/components/weekly-value-tab"
 
 const tabTitles: Record<string, string> = {
