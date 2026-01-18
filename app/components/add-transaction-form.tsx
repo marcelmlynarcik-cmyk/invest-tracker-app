@@ -13,7 +13,11 @@ import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
-export function AddTransactionForm() {
+interface AddTransactionFormProps {
+  onTransactionAdded: () => Promise<void>;
+}
+
+export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormProps) {
   const [transactionType, setTransactionType] = useState<"deposit" | "withdraw">("deposit")
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
@@ -36,6 +40,7 @@ export function AddTransactionForm() {
       setAmount("")
       setDate(new Date().toISOString().slice(0, 10))
       router.refresh()
+      onTransactionAdded(); // Call the callback to refresh data in the parent component
     }
   }
 

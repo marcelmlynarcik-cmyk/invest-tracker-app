@@ -34,8 +34,14 @@ type SortOption =
   | 'za'
   | 'weight_desc'
   | 'weight_asc'
-  | 'performance_desc'
-  | 'performance_asc'
+  | 'value_desc'
+  | 'value_asc'
+  | 'profit_desc'
+  | 'profit_asc'
+  | 'profit_percent_desc'
+  | 'profit_percent_asc'
+  | 'alpha_asc'
+  | 'alpha_desc'
   | 'manual'
   | 'avg_down_opportunity';
 
@@ -264,11 +270,7 @@ export function PortfolioTab() {
       {/* Sort by control */}
       <div className="flex items-center justify-end px-4 md:px-0">
         <Label htmlFor="sort-by" className="mr-2 text-sm font-medium">Zoradiť podľa:</Label>
-        <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
-          <SelectTrigger id="sort-by" className="w-[180px]">
-            <SelectValue placeholder="Zoradiť podľa" />
-          </SelectTrigger>
-          <SelectContent>
+        <Select id="sort-by" className="w-[180px]" value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
             <SelectItem value="weight_desc">Váha portfólia (zost.)</SelectItem>
             <SelectItem value="weight_asc">Váha portfólia (vzost.)</SelectItem>
             <SelectItem value="value_desc">Aktuálna hodnota (zost.)</SelectItem>
@@ -281,9 +283,7 @@ export function PortfolioTab() {
             <SelectItem value="alpha_asc">Názov (A-Z)</SelectItem>
             <SelectItem value="alpha_desc">Názov (Z-A)</SelectItem>
             <SelectItem value="manual">Manuálne</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        </Select>      </div>
 
       {/* Desktop View: Table */}
       <div className="hidden md:block">

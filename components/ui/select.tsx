@@ -95,8 +95,8 @@ SelectContent.displayName = "SelectContent";
 // --- SelectItem Component ---
 // This corresponds to an <option> tag.
 const SelectItem = React.forwardRef<
-  HTMLLIElement, // Changed to li as it would be in a custom dropdown
-  React.LiHTMLAttributes<HTMLLIElement> & { value: string; disabled?: boolean }
+  HTMLOptionElement, // Corrected to HTMLOptionElement
+  React.OptionHTMLAttributes<HTMLOptionElement> & { value: string } // Corrected to OptionHTMLAttributes
 >(({ className, children, value, disabled, ...props }, ref) => (
   // In a native <select>, this would be an <option>.
   // For this simple implementation, the parent Select component (which is a native <select>)

@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
   ReferenceLine, // Added for zero line
+  Cell, // Added Cell component
 } from "recharts"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState, useMemo } from "react"
@@ -156,7 +157,7 @@ export function PerformanceTab() {
               <ReferenceLine y={0} stroke="#999" strokeDasharray="3 3" /> {/* Zero line */}
               <Bar dataKey="value" name="Zisk/Strata">
                 {weeklyPerformance.map((entry, index) => (
-                  <Bar key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
+                  <Cell key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
                 ))}
               </Bar>
             </BarChart>
@@ -193,7 +194,7 @@ export function PerformanceTab() {
               <ReferenceLine y={0} stroke="#999" strokeDasharray="3 3" /> {/* Zero line */}
               <Bar dataKey="value" name="Zisk/Strata">
                 {monthlyPerformance.map((entry, index) => (
-                  <Bar key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
+                  <Cell key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
                 ))}
               </Bar>
             </BarChart>
