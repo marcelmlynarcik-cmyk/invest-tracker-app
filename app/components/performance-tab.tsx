@@ -1,6 +1,9 @@
+"use client"
+
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -8,17 +11,18 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  ReferenceLine, // Added for zero line
 } from "recharts"
 import { supabase } from "@/lib/supabase"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Transaction, WeeklyValue } from "@/lib/types"
 import { formatCZK, getPerformanceMetrics } from "@/lib/utils"
-import { format, getWeek } from 'date-fns';
+import { format } from 'date-fns';
+import { cs } from "date-fns/locale" // For Slovak date formatting
 
 export function PerformanceTab() {
   const [loading, setLoading] = useState(true)
@@ -48,70 +52,150 @@ export function PerformanceTab() {
     fetchData()
   }, [])
 
+  const { weeklyPerformance, monthlyPerformance } = useMemo(() => {
+    return getPerformanceMetrics(transactions, allWeeklyValues);
+  }, [transactions, allWeeklyValues]);
+
+  // Performance Summary calculations
+  const performanceSummary = useMemo(() => {
+    const allPerformance = [...weeklyPerformance, ...monthlyPerformance];
+    if (allPerformance.length === 0) {
+      return null;
+    }
+
+    const sortedPerformance = [...allPerformance].sort((a, b) => a.value - b.value);
+
+    const bestPeriod = sortedPerformance[sortedPerformance.length - 1];
+    const worstPeriod = sortedPerformance[0];
+    const currentPeriod = weeklyPerformance[weeklyPerformance.length - 1] || monthlyPerformance[monthlyPerformance.length - 1]; // Most recent
+
+    return { bestPeriod, worstPeriod, currentPeriod };
+  }, [weeklyPerformance, monthlyPerformance]);
+
+
   if (loading) {
-    return <div>Načítava sa...</div>
+    return <div className="text-center py-8">Načítavam dáta výkonnosti...</div>
   }
 
-  const { weeklyPerformance, monthlyPerformance } = getPerformanceMetrics(transactions, allWeeklyValues)
+  if (!performanceSummary && weeklyPerformance.length === 0 && monthlyPerformance.length === 0) {
+    return (
+      <Card className="rounded-xl shadow-md p-4 text-center">
+        <CardContent>
+          <p className="text-gray-500">Zatiaľ nemáme dostatok dát na vyhodnotenie trendu.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatPerformanceValue = (value: number) => {
+    const sign = value > 0 ? '+' : '';
+    const colorClass = value > 0 ? 'text-green-500' : (value < 0 ? 'text-red-500' : 'text-gray-500');
+    return <span className={colorClass}>{sign}{formatCZK(value)}</span>;
+  };
+
+  const formatXAxisWeekly = (tick: string) => tick.split(' ')[0]; // "W35 2025" -> "W35"
+  const formatXAxisMonthly = (tick: string) => format(new Date(tick), 'MMM yy', { locale: cs }); // "2025-10" -> "Okt 25"
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Týždenná výkonnosť</CardTitle>
+    <div className="space-y-6 p-4 md:p-6">
+      {/* 1. Performance Summary Card */}
+      {performanceSummary && (
+        <Card className="rounded-xl shadow-md p-4">
+          <CardHeader className="p-0 mb-4">
+            <CardTitle className="text-xl">Výkonnosť – prehľad</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 space-y-3">
+            {performanceSummary.bestPeriod && (
+              <div className="flex justify-between items-center text-sm">
+                <p className="text-gray-500">Najlepší výkon ({performanceSummary.bestPeriod.date}):</p>
+                {formatPerformanceValue(performanceSummary.bestPeriod.value)}
+              </div>
+            )}
+            {performanceSummary.worstPeriod && (
+              <div className="flex justify-between items-center text-sm">
+                <p className="text-gray-500">Najhorší výkon ({performanceSummary.worstPeriod.date}):</p>
+                {formatPerformanceValue(performanceSummary.worstPeriod.value)}
+              </div>
+            )}
+            {performanceSummary.currentPeriod && (
+              <div className="flex justify-between items-center text-sm">
+                <p className="text-gray-500">Aktuálny trend ({performanceSummary.currentPeriod.date}):</p>
+                {formatPerformanceValue(performanceSummary.currentPeriod.value)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 2. Weekly Performance Chart */}
+      <Card className="rounded-xl shadow-md p-4">
+        <CardHeader className="p-0 mb-4">
+          <CardTitle className="text-xl">Týždenná výkonnosť</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyPerformance}>
+            <BarChart data={weeklyPerformance} margin={{ top: 10, right: 10, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(tick) => {
-                  return tick.replace(' ', '-'); // e.g., W03 2026 -> W03-2026
-                }}
+                tickFormatter={formatXAxisWeekly}
                 interval="preserveStartEnd"
                 minTickGap={10}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: '#888' }}
               />
               <YAxis
                 tickFormatter={(tick) => formatCZK(tick)}
-                domain={['auto', 'auto']}
+                domain={['auto', 'auto']} // Allows dynamic domain
                 allowDataOverflow={false}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: '#888' }}
               />
-              <Tooltip formatter={(value: number) => formatCZK(value)} />
-              <Legend layout="horizontal" align="center" verticalAlign="top" wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="value" fill="#8884d8" />
+              <Tooltip
+                formatter={(value: number, name: string, props: any) => [formatCZK(value), "Zisk/Strata"]}
+                labelFormatter={(label) => `Týždeň: ${label}`}
+              />
+              <ReferenceLine y={0} stroke="#999" strokeDasharray="3 3" /> {/* Zero line */}
+              <Bar dataKey="value" name="Zisk/Strata">
+                {weeklyPerformance.map((entry, index) => (
+                  <Bar key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Mesačná výkonnosť</CardTitle>
+
+      {/* 3. Monthly Performance Chart */}
+      <Card className="rounded-xl shadow-md p-4">
+        <CardHeader className="p-0 mb-4">
+          <CardTitle className="text-xl">Mesačná výkonnosť</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyPerformance}>
+            <BarChart data={monthlyPerformance} margin={{ top: 10, right: 10, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(tick) => {
-                  return tick; // Should be YYYY-MM now
-                }}
+                tickFormatter={formatXAxisMonthly}
                 interval="preserveStartEnd"
                 minTickGap={10}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: '#888' }}
               />
               <YAxis
                 tickFormatter={(tick) => formatCZK(tick)}
-                domain={['auto', 'auto']}
+                domain={['auto', 'auto']} // Allows dynamic domain
                 allowDataOverflow={false}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: '#888' }}
               />
-              <Tooltip formatter={(value: number) => formatCZK(value)} />
-              <Legend layout="horizontal" align="center" verticalAlign="top" wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="value" fill="#82ca9d" />
+              <Tooltip
+                formatter={(value: number, name: string, props: any) => [formatCZK(value), "Zisk/Strata"]}
+                labelFormatter={(label) => `Mesiac: ${label}`}
+              />
+              <ReferenceLine y={0} stroke="#999" strokeDasharray="3 3" /> {/* Zero line */}
+              <Bar dataKey="value" name="Zisk/Strata">
+                {monthlyPerformance.map((entry, index) => (
+                  <Bar key={`bar-${index}`} fill={entry.value > 0 ? '#82ca9d' : '#ff7300'} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
