@@ -23,11 +23,9 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { UserStock } from "@/lib/types"
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select" // Assuming Select component exists
+} from "@/components/ui/select"
+import { EditPortfolioItemModal } from "@/app/components/edit-portfolio-item-modal"; // Import the new modal component
 
 type SortOption =
   | 'az'
@@ -52,6 +50,9 @@ export function PortfolioTab() {
   const [userStocks, setUserStocks] = useState<UserStock[]>([])
   const [sortOption, setSortOption] = useState<SortOption>('weight_desc');
   const [manualOrder, setManualOrder] = useState<string[]>([]);
+  const [showEditModal, setShowEditModal] = useState(false); // State for modal visibility
+  const [selectedStock, setSelectedStock] = useState<UserStock | null>(null); // State for selected stock
+
 
   // Refs for drag and drop
   const dragItem = useRef<number | null>(null);
@@ -61,10 +62,14 @@ export function PortfolioTab() {
     setLoading(true)
     try {
       const res = await fetch('/api/stocks');
+      if (!res.ok) {
+        throw new Error(`API responded with status ${res.status}: ${await res.text()}`);
+      }
       const stocksData: UserStock[] = await res.json();
+      console.log("Fetched stocksData:", stocksData); // Log the fetched data
       setUserStocks(stocksData || []);
-    } catch (error) {
-      console.error("Error fetching portfolio data:", error)
+    } catch (error: any) {
+      console.error("Error fetching portfolio data:", error.message, error.stack, error)
       setUserStocks([]);
     } finally {
       setLoading(false)
@@ -157,6 +162,41 @@ export function PortfolioTab() {
     }
     return sortedStocks;
   }, [userStocks, sortOption, manualOrder]);
+
+  const handleEditClick = useCallback((stock: UserStock) => {
+    setSelectedStock(stock);
+    setShowEditModal(true);
+  }, []);
+
+  const handleSavePortfolioItem = useCallback(async (ticker: string, newShares: number, newAveragePrice: number) => {
+    try {
+      const res = await fetch('/api/update-portfolio-item', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ticker, newShares, newAveragePrice }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text(); // Read raw response text
+        console.error("Raw API response text:", errorText);
+        let errorData = { error: 'Failed to update portfolio item on server.' };
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (jsonError) {
+          console.error("Could not parse error response as JSON:", jsonError);
+        }
+        throw new Error(errorData.error || 'Failed to update portfolio item on server.');
+      }
+
+      await fetchPortfolioData(); // Refetch data after successful save
+      setShowEditModal(false);
+    } catch (error) {
+      console.error("Error saving portfolio item:", error);
+      alert(`Chyba pri ukladaní údajov: ${(error as Error).message}. Skúste to prosím znova.`);
+    }
+  }, [fetchPortfolioData]);
 
   // Drag and Drop Handlers
   const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, position: number) => {
@@ -310,11 +350,11 @@ export function PortfolioTab() {
               </TableHeader>
               <TableBody>
                 {sortedUserStocks.map((stock) => (
-                  <TableRow key={stock.ticker}>
+                  <TableRow key={stock.ticker} onClick={() => handleEditClick(stock)} className="cursor-pointer">
                     <TableCell className="font-medium">{stock.ticker}</TableCell>
                     <TableCell>{stock.name}</TableCell>
                     <TableCell>
-                      {stock.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                      {stock.shares.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
                     </TableCell>
                     <TableCell>
                       {formatCurrency(stock.averagePrice, stock.currency)}
@@ -342,7 +382,7 @@ export function PortfolioTab() {
                     >
                       {stock.percentDiff.toFixed(2)}%
                     </TableCell>
-                    <TableCell>{stock.portfolioWeightPercent.toFixed(2)}%</TableCell>
+                    <TableCell>{stock.portfolioWeightPercent.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -370,13 +410,14 @@ export function PortfolioTab() {
           return (
             <Card
               key={stock.ticker}
-              className="p-4 relative"
+              className="p-4 relative cursor-pointer"
               draggable={sortOption === 'manual'}
               onDragStart={(e) => handleDragStart(e, index)}
               onDragEnter={(e) => handleDragEnter(e, index)}
               onDragOver={handleDragOver}
               onDrop={handleDrop} // Handle drop on target item
               onDragEnd={handleDragEnd}
+              onClick={() => handleEditClick(stock)} // Add onClick handler for mobile cards
             >
               {sortOption === 'manual' && (
                 <div className="absolute top-0 left-0 p-2 cursor-grab text-gray-400">
@@ -400,7 +441,7 @@ export function PortfolioTab() {
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">Kusy: </span>
-                  {stock.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                  {stock.shares.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
                 </div>
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">Priemerná cena: </span>
@@ -425,13 +466,19 @@ export function PortfolioTab() {
                 {/* Progress value should be between 0 and 100 */}
                 <Progress value={Math.min(Math.max(stock.portfolioWeightPercent, 0), 100)} className="h-2" />
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {stock.portfolioWeightPercent.toFixed(2)}%
+                  {stock.portfolioWeightPercent.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                 </span>
               </div>
             </Card>
           );
         })}
       </div>
+      <EditPortfolioItemModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        stock={selectedStock}
+        onSave={handleSavePortfolioItem}
+      />
     </div>
   )
 }

@@ -4,21 +4,50 @@ import { UserStock } from '@/lib/types';
 
 export async function GET() {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-  const apiKey = process.env.GOOGLE_API_KEY;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
-  if (!spreadsheetId || !apiKey) {
+  console.log("Stocks API: spreadsheetId:", spreadsheetId ? "Configured" : "NOT Configured");
+  console.log("Stocks API: clientEmail:", clientEmail ? "Configured" : "NOT Configured");
+  if (privateKey) {
+    console.log("Stocks API: privateKey (first 50 chars):", privateKey.substring(0, 50));
+    console.log("Stocks API: privateKey (after newline replace, first 50 chars):", privateKey.replace(/\\n/g, '\n').substring(0, 50));
+  } else {
+    console.log("Stocks API: privateKey: NOT Configured");
+  }
+
+  if (!spreadsheetId || !clientEmail || !privateKey) {
+    console.error('Configuration Error: Google Sheets ID or Service Account credentials not configured.');
     return NextResponse.json(
-      { error: 'Google Sheets ID or API Key not configured.' },
+      { error: 'Google Sheets ID or Service Account credentials not configured.' },
       { status: 500 }
     );
   }
 
-  const sheets = google.sheets({
-    version: 'v4',
-    auth: apiKey,
+  // Robustly clean and validate the private key
+  const cleanedPrivateKey = privateKey.replace(/\\n/g, '\n').trim(); // Handle escaped newlines and trim whitespace
+  if (!cleanedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----') || !cleanedPrivateKey.endsWith('-----END PRIVATE KEY-----')) {
+    console.error('Configuration Error: GOOGLE_PRIVATE_KEY is malformed. It must be a valid PEM-encoded private key including BEGIN/END markers.');
+    return NextResponse.json(
+      { error: 'GOOGLE_PRIVATE_KEY is malformed.' },
+      { status: 500 }
+    );
+  }
+
+  const auth = new google.auth.JWT({
+    email: clientEmail,
+    key: cleanedPrivateKey,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'], // Readonly scope for GET
   });
 
   try {
+    await auth.authorize(); // Authenticate the service account
+
+    const sheets = google.sheets({
+      version: 'v4',
+      auth: auth, // Use the authenticated JWT client
+    });
+
     const range = 'Portfólio!A2:M'; // Adjust the range as needed
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
@@ -32,58 +61,14 @@ export async function GET() {
 
     const parseLocaleNumber = (value: string | undefined): number => {
       if (typeof value === 'string' && value.trim() !== '') {
-        let s = value.trim();
-
-        // Remove all characters that are not digits, dot, or comma
-        s = s.replace(/[^0-9.,]/g, '');
-
-        // Determine decimal and thousands separators based on presence and order
-        const commaIndex = s.indexOf(',');
-        const dotIndex = s.indexOf('.');
-
-        let finalValueString: string;
-
-        // Case 1: European format (e.g., 1.234.567,89) - comma is decimal, dots are thousands
-        if (commaIndex > -1 && dotIndex > -1 && commaIndex > dotIndex) {
-          finalValueString = s.replace(/\./g, '').replace(',', '.');
-        } 
-        // Case 2: American format (e.g., 1,234,567.89) - dot is decimal, commas are thousands
-        else if (commaIndex > -1 && dotIndex > -1 && dotIndex > commaIndex) {
-          finalValueString = s.replace(/,/g, ''); // Dot is already decimal
-        }
-        // Case 3: Only commas, no dots (e.g., 1,234 or 0,13)
-        else if (commaIndex > -1) { 
-          // If it looks like "123,45" (decimal comma) -> replace comma with dot
-          // If it looks like "1,234" (thousands comma) -> remove comma
-          // Heuristic: If comma is followed by 1 or 2 digits, it's likely a decimal.
-          if (s.match(/,\d{1,2}$/)) { // e.g., "123,45"
-            finalValueString = s.replace(',', '.');
-          } else { // e.g., "1,234"
-            finalValueString = s.replace(/,/g, '');
-          }
-        }
-        // Case 4: Only dots, no commas (e.g., 1.234 or 0.13)
-        else if (dotIndex > -1) {
-          // If it looks like "1.234" (thousands dot for 1234) -> remove dot
-          // If it looks like "0.13" (decimal dot) -> leave as is
-          // Heuristic: If dot is followed by 3 digits AND NOT at the end (thousands), remove dot.
-          // Or if dot is followed by 1 or 2 digits (decimal), leave it.
-          // Simplified: assume single dot followed by 1 or 2 digits is decimal, otherwise remove dots.
-          if (s.match(/\.\d{1,2}$/)) { // e.g., "123.45"
-            finalValueString = s; // Leave as is
-          } else { // e.g., "1.234" or "1.234.567"
-            finalValueString = s.replace(/\./g, '');
-          }
-        }
-        // Case 5: No commas or dots (pure integer string)
-        else {
-          finalValueString = s;
-        }
-
-        const parsed = parseFloat(finalValueString);
+        // Remove common thousands separators (space, thin space, non-breaking space)
+        let cleaned = value.trim().replace(/[\s\u202F\u00A0]/g, '');
+        // Replace comma decimal separator with dot
+        cleaned = cleaned.replace(',', '.');
+        const parsed = parseFloat(cleaned);
         return isNaN(parsed) ? 0 : parsed;
       }
-      return 0; // Default for empty/undefined string
+      return 0;
     }
 
     const stocks: UserStock[] = rows.map((row) => ({
@@ -103,10 +88,10 @@ export async function GET() {
     }));
 
     return NextResponse.json(stocks);
-  } catch (error) {
-    console.error('Error fetching from Google Sheets:', error);
+  } catch (error: any) {
+    console.error('Error fetching from Google Sheets:', error.message, error.stack, error);
     return NextResponse.json(
-      { error: 'Failed to fetch stock data.' },
+      { error: error.message || 'Failed to fetch stock data.' },
       { status: 500 }
     );
   }
