@@ -1,43 +1,38 @@
+console.log("=== ENV DEBUG START ===");
+console.log("GOOGLE_SHEETS_ID:", process.env.GOOGLE_SHEETS_ID);
+console.log("GOOGLE_SERVICE_ACCOUNT_EMAIL:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+console.log(
+  "GOOGLE_PRIVATE_KEY_BASE64 exists:",
+  !!process.env.GOOGLE_PRIVATE_KEY_BASE64
+);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("=== ENV DEBUG END ===");
+
+
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { UserStock } from '@/lib/types';
 
 export async function GET() {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
-  console.log("Stocks API: spreadsheetId:", spreadsheetId ? "Configured" : "NOT Configured");
-  console.log("Stocks API: clientEmail:", clientEmail ? "Configured" : "NOT Configured");
-  if (privateKey) {
-    console.log("Stocks API: privateKey (first 50 chars):", privateKey.substring(0, 50));
-    console.log("Stocks API: privateKey (after newline replace, first 50 chars):", privateKey.replace(/\\n/g, '\n').substring(0, 50));
-  } else {
-    console.log("Stocks API: privateKey: NOT Configured");
-  }
-
-  if (!spreadsheetId || !clientEmail || !privateKey) {
-    console.error('Configuration Error: Google Sheets ID or Service Account credentials not configured.');
+  if (!spreadsheetId || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY_BASE64) {
+    console.error('Configuration Error: Google Sheets ID, Service Account Email, or Google Private Key Base64 not configured.');
     return NextResponse.json(
-      { error: 'Google Sheets ID or Service Account credentials not configured.' },
+      { error: 'Google Sheets ID, Service Account Email, or Google Private Key Base64 not configured.' },
       { status: 500 }
     );
   }
 
-  // Robustly clean and validate the private key
-  const cleanedPrivateKey = privateKey.replace(/\\n/g, '\n').trim(); // Handle escaped newlines and trim whitespace
-  if (!cleanedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----') || !cleanedPrivateKey.endsWith('-----END PRIVATE KEY-----')) {
-    console.error('Configuration Error: GOOGLE_PRIVATE_KEY is malformed. It must be a valid PEM-encoded private key including BEGIN/END markers.');
-    return NextResponse.json(
-      { error: 'GOOGLE_PRIVATE_KEY is malformed.' },
-      { status: 500 }
-    );
-  }
+  const privateKey = Buffer.from(
+    process.env.GOOGLE_PRIVATE_KEY_BASE64!,
+    "base64"
+  ).toString("utf8");
 
   const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: cleanedPrivateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'], // Readonly scope for GET
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
 
   try {
@@ -96,3 +91,8 @@ export async function GET() {
     );
   }
 }
+console.log("ENV CHECK", {
+  sheets: process.env.GOOGLE_SHEETS_ID,
+  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  keyExists: !!process.env.GOOGLE_PRIVATE_KEY_BASE64,
+});
