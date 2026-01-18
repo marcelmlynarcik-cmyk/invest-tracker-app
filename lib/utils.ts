@@ -13,8 +13,20 @@ export function formatCZK(amount: number | null | undefined): string {
   return new Intl.NumberFormat("cs-CZ", {
     style: "currency",
     currency: "CZK",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+export function formatCurrency(amount: number | null | undefined, currency: string): string {
+  if (amount === null || amount === undefined) {
+    return ""
+  }
+  return new Intl.NumberFormat("en-US", { // Using en-US for broad compatibility with currency symbols
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount)
 }
 

@@ -17,18 +17,19 @@ export interface StockData {
   // Add other relevant fields from Alpha Vantage if needed, e.g., 'open', 'high', 'low', 'volume'
 }
 
-export interface ExchangeRateData {
-  base_code: string
-  target_code: string
-  conversion_rate: number
-}
-
 export interface UserStock {
-  id: string
-  ticker: string
-  shares: number
-  avg_price: number // Average price in the stock's native currency
-  currency: string // E.g., 'USD', 'EUR', 'CZK'
-  created_at: string
+  ticker: string; // A
+  name: string; // B
+  shares: number; // C
+  averagePrice: number; // D
+  currentPrice: number; // E
+  percentDiff: number; // F
+  currentValueOriginalCurrency: number; // G
+  profitOriginalCurrency: number; // H
+  portfolioWeightPercent: number; // I
+  recommendation: string; // J
+  currency: string; // K
+  currentValueCZK: number; // L
+  profitCZK: number; // M
 }
 

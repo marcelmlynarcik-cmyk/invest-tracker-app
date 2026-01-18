@@ -7,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge" // Added import
+import { Progress } from "@/components/ui/progress" // Added import
 import {
   Table,
   TableBody,
@@ -15,283 +17,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatCZK } from "@/lib/utils"
-import { supabase } from "@/lib/supabase"
+import { formatCZK, formatCurrency } from "@/lib/utils"
 import { useEffect, useState, useCallback } from "react"
 import { UserStock } from "@/lib/types"
-import { fetchStockPrice, fetchExchangeRate, searchStockSymbols } from "@/lib/api"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { useDebounce } from "@/lib/hooks"
-import { PlusCircle, Loader2 } from "lucide-react"
-
-interface EnhancedUserStock extends UserStock {
-  currentPrice: number | null
-  currentPriceCZK: number | null
-  investedCZK: number
-  currentValueCZK: number
-  profitCZK: number
-  profitPercentage: number
-  weightInPortfolio: number // Percentage
-  conversionRate?: number // Added to resolve Vercel build error
-}
 
 export function PortfolioTab() {
   const [loading, setLoading] = useState(true)
-  const [userStocks, setUserStocks] = useState<EnhancedUserStock[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
-  const [searchResults, setSearchResults] = useState<any[] | null>(null)
-  const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string; currency: string } | null>(null)
-  const [shares, setShares] = useState("")
-  const [avgPrice, setAvgPrice] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
+  const [userStocks, setUserStocks] = useState<UserStock[]>([])
 
   const fetchPortfolioData = useCallback(async () => {
     setLoading(true)
-    const { data: stocksData, error } = await supabase.from("user_stocks").select("*")
-
-    if (error) {
-      console.error("Chyba pri načítaní akcií používateľa:", error)
+    try {
+      const res = await fetch('/api/stocks');
+      const stocksData: UserStock[] = await res.json();
+      setUserStocks(stocksData || []);
+    } catch (error) {
+      console.error("Error fetching portfolio data:", error)
+      setUserStocks([]);
+    } finally {
       setLoading(false)
-      return
     }
-
-    if (stocksData && stocksData.length > 0) {
-      const enhancedStocks: EnhancedUserStock[] = []
-      let totalPortfolioValueCZK = 0
-
-      // First pass to get all current prices and exchange rates
-      const stockPromises = stocksData.map(async (stock: UserStock) => {
-        let priceData = null;
-        try {
-          priceData = await fetchStockPrice(stock.ticker)
-        } catch (e) {
-          console.error(`Error fetching price for ${stock.ticker}:`, e);
-        }
-        const currentPrice = priceData?.price || null
-        let conversionRate = 1
-
-        if (stock.currency !== "CZK") {
-          let rateData = null;
-          try {
-            rateData = await fetchExchangeRate(stock.currency, "CZK")
-          } catch (e) {
-            console.error(`Error fetching exchange rate for ${stock.currency}/CZK:`, e);
-          }
-          conversionRate = rateData?.conversion_rate || 1
-        }
-
-        const currentPriceCZK = currentPrice ? currentPrice * conversionRate : null
-        const investedCZK = stock.shares * stock.avg_price * conversionRate
-
-        return {
-          ...stock,
-          currentPrice,
-          currentPriceCZK,
-          investedCZK,
-          conversionRate, // Store for later use
-        }
-      })
-
-      const resolvedStocks = await Promise.all(stockPromises)
-
-      // Calculate total portfolio value in CZK
-      totalPortfolioValueCZK = resolvedStocks.reduce((sum, stock) => {
-        return sum + (stock.currentPriceCZK ? stock.currentPriceCZK * stock.shares : 0)
-      }, 0)
-
-
-      // Second pass to calculate profit and weight
-      resolvedStocks.forEach(stock => {
-        const currentValueCZK = stock.currentPriceCZK ? stock.currentPriceCZK * stock.shares : stock.investedCZK
-        const profitCZK = currentValueCZK - stock.investedCZK
-        const profitPercentage = stock.investedCZK === 0 ? 0 : (profitCZK / stock.investedCZK) * 100
-        const weightInPortfolio = totalPortfolioValueCZK === 0 ? 0 : (currentValueCZK / totalPortfolioValueCZK) * 100
-
-        enhancedStocks.push({
-          ...stock,
-          currentValueCZK,
-          profitCZK,
-          profitPercentage,
-          weightInPortfolio,
-        })
-      })
-
-      setUserStocks(enhancedStocks)
-    } else {
-      setUserStocks([])
-    }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchPortfolioData()
   }, [fetchPortfolioData])
 
-  useEffect(() => {
-    async function performSearch() {
-      const searchKeywords = String(debouncedSearchTerm); // Ensure it's a string
-      console.log("debouncedSearchTerm (after String()):", searchKeywords);
-
-      if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) {
-        console.error("API kľúč Finnhub nie je nastavený v premenných prostredia. Vyhľadávanie akcií nemožno vykonať.");
-        setSearchResults(null);
-        return;
-      }
-
-      if (searchKeywords.length > 1) {
-        try {
-          const results = await searchStockSymbols(searchKeywords)
-          console.log("searchStockSymbols results:", results);
-          if (results) {
-            setSearchResults(results)
-          } else {
-            console.warn("searchStockSymbols nevrátil žiadne výsledky alebo prázdne pole.");
-          }
-        } catch (e) {
-          console.error("Chyba pri volaní searchStockSymbols:", e);
-          setSearchResults(null);
-        }
-      } else {
-        setSearchResults(null)
-      }
-    }
-    performSearch()
-  }, [debouncedSearchTerm])
-
-  const handleAddOrUpdateStock = async (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("handleAddOrUpdateStock called.");
-    console.log("selectedStock:", selectedStock);
-    console.log("shares:", shares);
-    console.log("avgPrice:", avgPrice);
-
-    if (!selectedStock || !shares || !avgPrice) {
-      console.log("Overenie zlyhalo: chýba vybraná akcia, počet kusov alebo priemerná cena.");
-      return
-    }
-
-    setIsSubmitting(true)
-    const newStock = {
-      ticker: selectedStock.symbol,
-      shares: parseFloat(shares),
-      avg_price: parseFloat(avgPrice),
-      currency: selectedStock.currency,
-    }
-
-    const { error } = await supabase.from("user_stocks").insert([newStock])
-
-    if (error) {
-      console.error("Chyba pri pridávaní/aktualizácii akcie do Supabase:", error)
-    } else {
-      console.log("Akcia bola úspešne pridaná/aktualizovaná.");
-      setSearchTerm("")
-      setSearchResults(null)
-      setSelectedStock(null)
-      setShares("")
-      setAvgPrice("")
-      await fetchPortfolioData() // Refresh data
-      router.refresh() // Trigger a Next.js router refresh
-    }
-    setIsSubmitting(false)
-  }
-
   if (loading) {
     return <div>Načítava sa portfólio...</div>
+  }
+  
+  if (userStocks.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Moje portfólio</CardTitle>
+          <CardDescription>
+            Žiadne dáta na zobrazenie. Skontrolujte svoj Google Sheet.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Pridať/Aktualizovať akciu</CardTitle>
-          <CardDescription>Vyhľadajte akciu a pridajte svoje podiely.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAddOrUpdateStock} className="space-y-4">
-            <div>
-              <Label htmlFor="stock-search">Ticker akcie</Label>
-              <Input
-                id="stock-search"
-                type="text"
-                placeholder="Vyhľadajte podľa symbolu alebo názvu (napr. AAPL, Apple Inc.)"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setSelectedStock(null) // Reset selection on search term change
-                }}
-                disabled={isSubmitting}
-              />
-              {searchResults && searchResults.length > 0 && !selectedStock && (
-                <div className="border rounded-md mt-2 max-h-40 overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.symbol}
-                      className="p-2 cursor-pointer hover:bg-muted"
-                      onClick={() => {
-                        setSelectedStock({ symbol: result.symbol, name: result.name, currency: result.currency })
-                        setSearchTerm(`${result.name} (${result.symbol})`)
-                        setSearchResults(null)
-                      }}
-                    >
-                      {result.name} ({result.symbol}) - {result.currency}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {selectedStock && (
-                <p className="mt-2 text-sm text-muted-foreground">Vybrané: {selectedStock.name} ({selectedStock.symbol}) - {selectedStock.currency}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="shares">Počet kusov</Label>
-              <Input
-                id="shares"
-                type="number"
-                value={shares}
-                onChange={(e) => setShares(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-            <div>
-              <Label htmlFor="avg-price">Priemerná nákupná cena ({selectedStock?.currency || "USD"})</Label>
-              <Input
-                id="avg-price"
-                type="number"
-                value={avgPrice}
-                onChange={(e) => setAvgPrice(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-            <Button type="submit" disabled={!selectedStock || isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Pridať/Aktualizovať akciu
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {userStocks.length > 0 && (
+      {/* Desktop View: Table */}
+      <div className="hidden md:block">
         <Card>
           <CardHeader>
-            <CardTitle>Moje podiely</CardTitle>
+            <CardTitle>Moje portfólio</CardTitle>
+            <CardDescription>
+              Tieto dáta sú načítané z vášho Google Sheetu.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Ticker</TableHead>
+                  <TableHead>Názov</TableHead>
                   <TableHead>Kusy</TableHead>
-                  <TableHead>Priemerná cena (CZK)</TableHead>
-                  <TableHead>Aktuálna cena (CZK)</TableHead>
+                  <TableHead>Priemerná cena</TableHead>
                   <TableHead>Aktuálna hodnota (CZK)</TableHead>
                   <TableHead>Zisk (CZK)</TableHead>
                   <TableHead>Zisk (%)</TableHead>
@@ -300,26 +87,114 @@ export function PortfolioTab() {
               </TableHeader>
               <TableBody>
                 {userStocks.map((stock) => (
-                  <TableRow key={stock.id}>
+                  <TableRow key={stock.ticker}>
                     <TableCell className="font-medium">{stock.ticker}</TableCell>
-                    <TableCell>{stock.shares}</TableCell>
-                    <TableCell>{formatCZK(stock.avg_price * (stock.conversionRate || 1))}</TableCell>
-                    <TableCell>{formatCZK(stock.currentPriceCZK)}</TableCell>
+                    <TableCell>{stock.name}</TableCell>
+                    <TableCell>
+                      {stock.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(stock.averagePrice, stock.currency)}
+                    </TableCell>
                     <TableCell>{formatCZK(stock.currentValueCZK)}</TableCell>
-                    <TableCell className={stock.profitCZK > 0 ? "text-green-500" : stock.profitCZK < 0 ? "text-red-500" : ""}>
+                    <TableCell
+                      className={
+                        stock.profitCZK > 0
+                          ? "text-green-500"
+                          : stock.profitCZK < 0
+                            ? "text-red-500"
+                            : ""
+                      }
+                    >
                       {formatCZK(stock.profitCZK)}
                     </TableCell>
-                    <TableCell className={stock.profitPercentage > 0 ? "text-green-500" : stock.profitPercentage < 0 ? "text-red-500" : ""}>
-                      {stock.profitPercentage.toFixed(2)}%
+                    <TableCell
+                      className={
+                        stock.percentDiff > 0
+                          ? "text-green-500"
+                          : stock.percentDiff < 0
+                            ? "text-red-500"
+                            : ""
+                      }
+                    >
+                      {stock.percentDiff.toFixed(2)}%
                     </TableCell>
-                    <TableCell>{stock.weightInPortfolio.toFixed(2)}%</TableCell>
+                    <TableCell>{stock.portfolioWeightPercent.toFixed(2)}%</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
-      )}
+      </div>
+
+      {/* Mobile View: Cards */}
+      <div className="block md:hidden space-y-4">
+        {userStocks.map((stock) => {
+          const profitCZKClass =
+            stock.profitCZK > 0
+              ? "text-green-500"
+              : stock.profitCZK < 0
+                ? "text-red-500"
+                : "";
+          const profitPercentClass =
+            stock.percentDiff > 0
+              ? "text-green-500"
+              : stock.percentDiff < 0
+                ? "text-red-500"
+                : "";
+
+          return (
+            <Card key={stock.ticker} className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{stock.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {stock.ticker}
+                  </p>
+                </div>
+                <Badge variant="secondary">{stock.currency}</Badge>
+              </div>
+
+              <div className="mt-2 text-3xl font-bold">
+                {formatCZK(stock.currentValueCZK)}
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Kusy: </span>
+                  {stock.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Priemerná cena: </span>
+                  {formatCurrency(stock.averagePrice, stock.currency)}
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Zisk (CZK): </span>
+                  <span className={profitCZKClass}>
+                    {formatCZK(stock.profitCZK)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Zisk (%): </span>
+                  <span className={profitPercentClass}>
+                    {stock.percentDiff.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Váha v portfóliu:</p>
+                {/* Progress value should be between 0 and 100 */}
+                <Progress value={Math.min(Math.max(stock.portfolioWeightPercent, 0), 100)} className="h-2" />
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {stock.portfolioWeightPercent.toFixed(2)}%
+                </span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   )
 }
