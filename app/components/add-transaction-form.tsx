@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
 interface AddTransactionFormProps {
@@ -21,26 +20,40 @@ export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormPro
   const [transactionType, setTransactionType] = useState<"deposit" | "withdraw">("deposit")
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
+    setError(null)
 
-    const { error } = await supabase.from("transactions").insert([
-      {
-        type: transactionType,
-        amount: parseFloat(amount),
-        date,
-      },
-    ])
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: transactionType,
+          amount: parseFloat(amount),
+          date,
+        }),
+      })
 
-    if (error) {
-      console.error("Chyba pri pridávaní transakcie:", error)
-    } else {
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Nepodarilo sa pridať transakciu")
+      }
+      
       setAmount("")
       setDate(new Date().toISOString().slice(0, 10))
-      router.refresh()
-      onTransactionAdded(); // Call the callback to refresh data in the parent component
+      await onTransactionAdded(); // Call the callback to refresh data in the parent component
+      
+    } catch (err: any) {
+      setError(err.message)
+      console.error("Chyba pri pridávaní transakcie:", err.message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -56,6 +69,7 @@ export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormPro
               type="button"
               variant={transactionType === "deposit" ? "default" : "outline"}
               onClick={() => setTransactionType("deposit")}
+              disabled={isSubmitting}
             >
               Vklad
             </Button>
@@ -63,6 +77,7 @@ export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormPro
               type="button"
               variant={transactionType === "withdraw" ? "default" : "outline"}
               onClick={() => setTransactionType("withdraw")}
+              disabled={isSubmitting}
             >
               Výber
             </Button>
@@ -75,6 +90,7 @@ export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormPro
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -85,9 +101,13 @@ export function AddTransactionForm({ onTransactionAdded }: AddTransactionFormPro
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
-          <Button type="submit">Pridať transakciu</Button>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Pridávam...' : 'Pridať transakciu'}
+          </Button>
         </form>
       </CardContent>
     </Card>

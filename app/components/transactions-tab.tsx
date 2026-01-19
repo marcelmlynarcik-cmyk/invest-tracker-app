@@ -3,14 +3,16 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button" // Assuming Button component exists
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog" // Assuming Dialog components exist
+import { Button } from "@/components/ui/button" 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { formatCZK } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { Transaction } from "@/lib/types"
 import { AddTransactionForm } from "./add-transaction-form"
-import { format } from "date-fns"
-import { cs } from "date-fns/locale" // Import Czech locale for date formatting
+import { format, parseISO } from "date-fns"
+import { cs } from "date-fns/locale"
 
 type FilterType = 'all' | 'deposit' | 'withdraw';
 
@@ -18,15 +20,23 @@ export function TransactionsTab() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filterType, setFilterType] = useState<FilterType>('all');
+  
+  // Dialog and state for selected transaction
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // State for submission status and form inputs
+  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [editedAmount, setEditedAmount] = useState('');
+  const [editedDate, setEditedDate] = useState('');
+
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase.from("transactions").select().order('date', { ascending: false });
     if (error) {
       console.error("Error fetching transactions:", error);
-      // Handle error display to user
     } else {
       setTransactions(data as Transaction[]);
     }
@@ -36,6 +46,15 @@ export function TransactionsTab() {
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
+
+  // Reset states when dialog is closed
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setSelectedTransaction(null);
+      setIsEditing(false);
+      setSubmissionStatus('idle');
+    }
+  }, [isDialogOpen]);
 
   const filteredTransactions = useMemo(() => {
     if (filterType === 'all') {
@@ -74,27 +93,70 @@ export function TransactionsTab() {
 
   const handleTransactionClick = (tx: Transaction) => {
     setSelectedTransaction(tx);
+    setEditedAmount(tx.amount.toString());
+    // Format date to YYYY-MM-DD for the input[type=date]
+    setEditedDate(format(parseISO(tx.date), 'yyyy-MM-dd'));
     setIsDialogOpen(true);
   };
 
   const handleEdit = () => {
-    console.log("Edit transaction:", selectedTransaction);
-    // Implement edit logic here (e.g., navigate to edit form or open modal)
-    setIsDialogOpen(false);
+    setIsEditing(true);
   };
 
   const handleDelete = async () => {
-    if (selectedTransaction) {
-      console.log("Delete transaction:", selectedTransaction);
-      // Implement delete logic here
-      const { error } = await supabase.from('transactions').delete().eq('id', selectedTransaction.id);
-      if (error) {
-        console.error("Error deleting transaction:", error);
-        // Handle error display
-      } else {
-        fetchTransactions(); // Re-fetch transactions to update UI
+    if (!selectedTransaction || !window.confirm("Naozaj chcete zmazať túto transakciu?")) {
+      return;
+    }
+
+    setSubmissionStatus('loading');
+    try {
+      if (!selectedTransaction) throw new Error("No transaction selected for deletion.");
+
+      const response = await fetch(`/api/transactions?id=${selectedTransaction.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Nepodarilo sa zmazať transakciu');
       }
-      setIsDialogOpen(false);
+
+      await fetchTransactions(); // Re-fetch
+      setSubmissionStatus('success');
+      setTimeout(() => setIsDialogOpen(false), 500); // Close after a short delay
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error);
+      setSubmissionStatus('error');
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedTransaction) return;
+
+    setSubmissionStatus('loading');
+    try {
+      const amount = parseFloat(editedAmount);
+      if (isNaN(amount) || amount <= 0) {
+          throw new Error("Neplatná suma.");
+      }
+
+      const response = await fetch(`/api/transactions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedTransaction.id, amount, date: editedDate }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Nepodarilo sa aktualizovať transakciu');
+      }
+
+      await fetchTransactions(); // Re-fetch
+      setSubmissionStatus('success');
+      setTimeout(() => setIsDialogOpen(false), 500); // Close after a short delay
+    } catch (error: any) {
+      console.error("Error updating transaction:", error);
+      setSubmissionStatus('error');
     }
   };
 
@@ -104,7 +166,7 @@ export function TransactionsTab() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <AddTransactionForm onTransactionAdded={fetchTransactions} /> {/* Pass callback to refresh data */}
+      <AddTransactionForm onTransactionAdded={fetchTransactions} />
 
       {/* Filter Buttons */}
       <div className="flex justify-center space-x-2 mb-4">
@@ -174,17 +236,62 @@ export function TransactionsTab() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-lg shadow-lg">
           <DialogHeader>
-            <DialogTitle>Upraviť / Zmazať transakciu</DialogTitle>
-            <DialogDescription>
-              {selectedTransaction?.type === 'deposit' ? 'Vklad' : 'Výber'} z dňa {selectedTransaction ? format(new Date(selectedTransaction.date), 'dd.MM.yyyy') : ''}: {selectedTransaction ? formatCZK(selectedTransaction.amount) : ''}
-            </DialogDescription>
+            <DialogTitle>{isEditing ? 'Upraviť transakciu' : 'Detail transakcie'}</DialogTitle>
+            {!isEditing && (
+              <DialogDescription>
+                {selectedTransaction?.type === 'deposit' ? 'Vklad' : 'Výber'} z dňa {selectedTransaction ? format(new Date(selectedTransaction.date), 'dd.MM.yyyy') : ''}: {selectedTransaction ? formatCZK(selectedTransaction.amount) : ''}
+              </DialogDescription>
+            )}
           </DialogHeader>
+
+          {isEditing ? (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">Suma</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  value={editedAmount}
+                  onChange={(e) => setEditedAmount(e.target.value)}
+                  className="col-span-3"
+                  disabled={submissionStatus === 'loading'}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">Dátum</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={editedDate}
+                  onChange={(e) => setEditedDate(e.target.value)}
+                  className="col-span-3"
+                  disabled={submissionStatus === 'loading'}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {submissionStatus === 'error' && <p className="text-red-500 text-sm text-center">Operácia zlyhala. Skúste to prosím znova.</p>}
+
           <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2">
-            <Button variant="secondary" onClick={handleEdit}>Upraviť</Button>
-            <Button variant="destructive" onClick={handleDelete}>Zmazať</Button>
-            <DialogClose asChild>
-              <Button variant="outline">Zrušiť</Button>
-            </DialogClose>
+            {isEditing ? (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={submissionStatus === 'loading'}>Zrušiť</Button>
+                <Button onClick={handleSaveChanges} disabled={submissionStatus === 'loading'}>
+                  {submissionStatus === 'loading' ? 'Ukladám...' : 'Uložiť zmeny'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={handleEdit}>Upraviť</Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={submissionStatus === 'loading'}>
+                  {submissionStatus === 'loading' ? 'Mažem...' : 'Zmazať'}
+                </Button>
+                <DialogClose asChild>
+                  <Button variant="outline">Zavrieť</Button>
+                </DialogClose>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
