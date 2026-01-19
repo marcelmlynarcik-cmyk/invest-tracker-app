@@ -19,7 +19,8 @@ import {
 } from "recharts"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button" // Assuming Button component exists
+import { PortfolioGoalCard } from "./portfolio-goal-card";
+import { Button } from "@/components/ui/button"
 
 export function OverviewTab() {
   const [loading, setLoading] = useState(true)
@@ -129,6 +130,11 @@ export function OverviewTab() {
           <p className={`text-lg font-bold ${profitColorClass}`}>{profitPercentage}%</p>
         </Card>
       </div>
+
+      <PortfolioGoalCard
+        currentValue={totalValue}
+        historicalValues={allWeeklyValues}
+      />
 
       {/* 3. PORTFOLIO PERFORMANCE CHART */}
       <Card className="rounded-xl shadow-md p-4">

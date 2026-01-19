@@ -161,10 +161,82 @@ export function getPerformanceMetrics(
     return weekA - weekB;
   });
 
-  const monthlyPerformance = Object.keys(monthlyPerformanceMap).map(monthString => ({
-    date: monthString,
-    value: monthlyPerformanceMap[monthString],
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
 
-  return { weeklyPerformance, monthlyPerformance }
-}
+    const monthlyPerformance = Object.keys(monthlyPerformanceMap).map(monthString => ({
+
+      date: monthString,
+
+      value: monthlyPerformanceMap[monthString],
+
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  
+
+    return { weeklyPerformance, monthlyPerformance }
+
+  }
+
+  
+
+  export function calculatePortfolioTrend(
+
+    historicalValues: WeeklyValue[]
+
+  ): { averageMonthlyIncrease: number } {
+
+    if (historicalValues.length < 2) {
+
+      return { averageMonthlyIncrease: 0 };
+
+    }
+
+  
+
+    const values = historicalValues.map(v => ({
+
+      date: new Date(v.date),
+
+      value: v.value
+
+    }));
+
+  
+
+    const firstDate = values[0].date;
+
+    const x = values.map(v => (v.date.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)); // days since first date
+
+    const y = values.map(v => v.value);
+
+    const n = values.length;
+
+  
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+
+    const sumY = y.reduce((a, b) => a + b, 0);
+
+    const sumXY = x.map((xi, i) => xi * y[i]).reduce((a, b) => a + b, 0);
+
+    const sumX2 = x.map(xi => xi * xi).reduce((a, b) => a + b, 0);
+
+  
+
+    // Linear regression formula for slope (m)
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+
+  
+
+    const averageDailyIncrease = slope;
+
+    const averageMonthlyIncrease = averageDailyIncrease * 30.44; // Average days in a month
+
+  
+
+    return { averageMonthlyIncrease };
+
+  }
+
+  
