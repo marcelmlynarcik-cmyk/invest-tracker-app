@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: "Track your investments with a modern portfolio dashboard",
   generator: "v0.app",
   manifest: "/manifest.json",
+  icons: {
+    apple: "/icons/icon-180x180.png",
+  },
 }
 
 export const viewport: Viewport = {
