@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
+import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   env: {
     SUPABASE_URL: "https://ttjoptibbumzpvogrbax.supabase.co",
     SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0am9wdGliYnVtenB2b2dyYmF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1ODQzNzUsImV4cCI6MjA4NDE2MDM3NX0.boPMgLagsqOr5Bs7qpoTh3VqRlCg9f7BIbK96uZpjiU",
@@ -11,4 +13,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const pwaConfig = {
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+};
+
+export default withPWA(pwaConfig)(nextConfig);
