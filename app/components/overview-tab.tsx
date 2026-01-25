@@ -155,7 +155,7 @@ export function OverviewTab() {
             ))}
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={filteredMonthlyEvolutionData}>
+            <AreaChart data={filteredMonthlyEvolutionData} margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
