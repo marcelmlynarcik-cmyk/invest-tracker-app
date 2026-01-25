@@ -13,6 +13,7 @@ import { Transaction } from "@/lib/types"
 import { AddTransactionForm } from "./add-transaction-form"
 import { format, parseISO } from "date-fns"
 import { cs } from "date-fns/locale"
+import { PlusCircle } from "lucide-react"; // Import PlusCircle icon
 
 type FilterType = 'all' | 'deposit' | 'withdraw';
 
@@ -20,6 +21,7 @@ export function TransactionsTab() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [showAddTransactionForm, setShowAddTransactionForm] = useState(false); // State to control form visibility
   
   // Dialog and state for selected transaction
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -42,6 +44,11 @@ export function TransactionsTab() {
     }
     setLoading(false);
   }, []);
+
+  const handleTransactionAddedAndCollapse = useCallback(async () => {
+    await fetchTransactions();
+    setShowAddTransactionForm(false); // Collapse the form after submission
+  }, [fetchTransactions]);
 
   useEffect(() => {
     fetchTransactions();
@@ -166,7 +173,20 @@ export function TransactionsTab() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <AddTransactionForm onTransactionAdded={fetchTransactions} />
+      <Card className="rounded-xl shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between p-4">
+          <CardTitle className="text-xl">Pridať transakciu</CardTitle>
+          <Button variant="ghost" size="icon" onClick={() => setShowAddTransactionForm(!showAddTransactionForm)}>
+            <PlusCircle className={`h-6 w-6 transition-transform ${showAddTransactionForm ? 'rotate-45' : ''}`} />
+            <span className="sr-only">{showAddTransactionForm ? 'Zavrieť formulár' : 'Otvoriť formulár'}</span>
+          </Button>
+        </CardHeader>
+        {showAddTransactionForm && (
+          <CardContent className="p-4 pt-0">
+            <AddTransactionForm onTransactionAdded={handleTransactionAddedAndCollapse} />
+          </CardContent>
+        )}
+      </Card>
 
       {/* Filter Buttons */}
       <div className="flex justify-center space-x-2 mb-4">
