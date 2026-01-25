@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
-import withPWA from "next-pwa";
+const withPWA = require("next-pwa");
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   turbopack: {},
   env: {
     SUPABASE_URL: "https://ttjoptibbumzpvogrbax.supabase.co",
@@ -18,4 +18,4 @@ const pwaConfig = {
   disable: process.env.NODE_ENV === "development",
 };
 
-export default withPWA(pwaConfig)(nextConfig);
+module.exports = withPWA(pwaConfig)(nextConfig);
