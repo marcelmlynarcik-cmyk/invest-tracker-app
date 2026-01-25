@@ -26,6 +26,8 @@ import {
   YAxis,
 } from "recharts"
 
+import { PlusCircle } from "lucide-react";
+
 export function WeeklyValueTab() {
   const [newValue, setNewValue] = useState("")
   const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10))
@@ -33,6 +35,7 @@ export function WeeklyValueTab() {
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAddWeeklyValueForm, setShowAddWeeklyValueForm] = useState(false); // State to control form visibility
 
   // State for modal
   const [selectedWeeklyValue, setSelectedWeeklyValue] = useState<WeeklyValue | null>(null);
@@ -95,6 +98,7 @@ export function WeeklyValueTab() {
         setNewValue("");
         setNewDate(new Date().toISOString().slice(0, 10));
         await fetchWeeklyValues();
+        setShowAddWeeklyValueForm(false); // Collapse the form after submission
         
     } catch (err: any) {
         setError(err.message);
@@ -206,23 +210,29 @@ export function WeeklyValueTab() {
       )}
 
       <Card className="rounded-xl shadow-md p-4">
-        <CardHeader className="p-0 mb-4">
+        <CardHeader className="flex flex-row items-center justify-between p-4">
           <CardTitle className="text-xl">Pridať týždennú hodnotu</CardTitle>
+          <Button variant="ghost" size="icon" onClick={() => setShowAddWeeklyValueForm(!showAddWeeklyValueForm)}>
+            <PlusCircle className={`h-6 w-6 transition-transform ${showAddWeeklyValueForm ? 'rotate-45' : ''}`} />
+            <span className="sr-only">{showAddWeeklyValueForm ? 'Zavrieť formulár' : 'Otvoriť formulár'}</span>
+          </Button>
         </CardHeader>
-        <CardContent className="p-0">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="value">Hodnota portfólia (CZK)</Label>
-              <Input id="value" type="number" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="Hodnota portfólia na konci týždňa" required disabled={isSubmitting} className="w-full" />
-            </div>
-            <div>
-              <Label htmlFor="date">Dátum</Label>
-              <Input id="date" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} required disabled={isSubmitting} className="w-full" />
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" disabled={isSubmitting} className="w-full">{isSubmitting ? 'Pridávam...' : 'Pridať hodnotu'}</Button>
-          </form>
-        </CardContent>
+        {showAddWeeklyValueForm && (
+          <CardContent className="p-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="value">Hodnota portfólia (CZK)</Label>
+                <Input id="value" type="number" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="Hodnota portfólia na konci týždňa" required disabled={isSubmitting} className="w-full" />
+              </div>
+              <div>
+                <Label htmlFor="date">Dátum</Label>
+                <Input id="date" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} required disabled={isSubmitting} className="w-full" />
+              </div>
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <Button type="submit" disabled={isSubmitting} className="w-full">{isSubmitting ? 'Pridávam...' : 'Pridať hodnotu'}</Button>
+            </form>
+          </CardContent>
+        )}
       </Card>
 
       {chartData.length > 1 && (
