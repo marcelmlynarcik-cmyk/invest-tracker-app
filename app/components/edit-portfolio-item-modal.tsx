@@ -11,17 +11,26 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UserStock } from "@/lib/types" // Assuming UserStock type is defined here
+import { UserStock, AiStockInsight } from "@/lib/types" // Import AiStockInsight
 import { formatCurrency } from "@/lib/utils"
+// import { AiStockInsightCard } from "./ai-stock-insight-card" // Removed AI insight card
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"; // Import Accordion components
 
 interface EditPortfolioItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   stock: UserStock | null;
+  aiInsight?: AiStockInsight | null; // Added aiInsight prop
   onSave: (ticker: string, newShares: number, newAveragePrice: number) => Promise<void>;
 }
 
-export function EditPortfolioItemModal({ isOpen, onClose, stock, onSave }: EditPortfolioItemModalProps) {
+export function EditPortfolioItemModal({ isOpen, onClose, stock, aiInsight, onSave }: EditPortfolioItemModalProps) {
   const [shares, setShares] = useState<string>("");
   const [averagePrice, setAveragePrice] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +75,7 @@ export function EditPortfolioItemModal({ isOpen, onClose, stock, onSave }: EditP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Upraviť {stock.name}</DialogTitle>
         </DialogHeader>
@@ -101,6 +110,32 @@ export function EditPortfolioItemModal({ isOpen, onClose, stock, onSave }: EditP
               className="col-span-3"
             />
           </div>
+
+          {/* AI Insight Section */}
+          {aiInsight && (
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="ai-insight">
+                <AccordionTrigger className="text-lg font-semibold py-2">
+                  AI Pohľad
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div>
+                    <h4 className="text-md font-semibold mb-1">Všeobecný pohľad AI:</h4>
+                    <p className="text-gray-700">{aiInsight.general_summary}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-md font-semibold mb-1">Pohľad AI na Vašu pozíciu:</h4>
+                    <p className="text-gray-700">{aiInsight.personalized_summary}</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Úroveň dôvery: <span className="capitalize">{aiInsight.confidence_level}</span>
+                    {aiInsight.generated_date && ` (Generované: ${aiInsight.generated_date})`}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isSaving}>Zrušiť</Button>

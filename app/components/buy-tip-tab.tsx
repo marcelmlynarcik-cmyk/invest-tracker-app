@@ -3,13 +3,23 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { UserStock } from "@/lib/types"
+import { UserStock, AiStockInsight } from "@/lib/types" // Add AiStockInsight
 import { formatCZK, formatCurrency } from "@/lib/utils"
 import { EditPortfolioItemModal } from "@/app/components/edit-portfolio-item-modal"
 
+// Map signal colors to Tailwind CSS classes
+const signalColorMap: Record<AiStockInsight['signal_color'], string> = {
+  dark_green: 'bg-green-700 text-white',
+  green: 'bg-green-500 text-white',
+  gray: 'bg-gray-500 text-white',
+  orange: 'bg-orange-500 text-white',
+  red: 'bg-red-500 text-white',
+};
+
 export function BuyTipTab() {
   const [loading, setLoading] = useState(true)
-  const [buyTipStock, setBuyTipStock] = useState<(UserStock & { calculatedPercentDiff: number }) | null>(null)
+  const [buyTipStock, setBuyTipStock] = useState<(UserStock & { calculatedPercentDiff: number, aiInsight: AiStockInsight | null }) | null>(null)
+  const [aiInsights, setAiInsights] = useState<Record<string, AiStockInsight>>({}); // Store AI insights by ticker
   const [noTipMessage, setNoTipMessage] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStock, setSelectedStock] = useState<UserStock | null>(null);
@@ -21,6 +31,19 @@ export function BuyTipTab() {
     try {
       const res = await fetch('/api/stocks');
       const stocksData: UserStock[] = await res.json();
+
+      // Fetch AI insights
+      const aiRes = await fetch('/api/ai/insights');
+      if (!aiRes.ok) {
+        throw new Error(`AI Insights API responded with status ${aiRes.status}: ${await aiRes.text()}`);
+      }
+      const insightsData: AiStockInsight[] = await aiRes.json();
+      const insightsMap = insightsData.reduce((acc, insight) => {
+        acc[insight.ticker] = insight;
+        return acc;
+      }, {} as Record<string, AiStockInsight>);
+      setAiInsights(insightsMap); // Update AI insights state
+      console.log("[BuyTipTab] Fetched AI Insights Map:", insightsMap); // Debug log
 
       if (stocksData && stocksData.length > 0) {
         // 1. Prepare candidates with calculated percentage difference
@@ -53,7 +76,10 @@ export function BuyTipTab() {
         }
         
         if (bestCandidate) {
-          setBuyTipStock(bestCandidate); // Store the best candidate
+          console.log("[BuyTipTab] Selected Best Candidate:", bestCandidate); // Debug log
+          const bestCandidateInsight = insightsMap[bestCandidate.ticker] || null;
+          console.log("[BuyTipTab] Best Candidate AI Insight:", bestCandidateInsight); // Debug log
+          setBuyTipStock({ ...bestCandidate, aiInsight: bestCandidateInsight }); // Store the best candidate with its insight
         } else {
           setBuyTipStock(null);
           setNoTipMessage("Momentálne neexistuje vhodná akcia na znižovanie priemernej ceny."); // No fallbacks
@@ -139,7 +165,16 @@ export function BuyTipTab() {
                   <h3 className="text-xl font-bold leading-tight">{buyTipStock.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{buyTipStock.ticker}</p>
                 </div>
-                <Badge variant="secondary" className="text-sm px-2 py-1">{buyTipStock.currency}</Badge>
+                <div className="flex items-center space-x-2"> {/* New container for badges */}
+                  <Badge variant="secondary" className="text-sm px-2 py-1">{buyTipStock.currency}</Badge>
+                  {buyTipStock.aiInsight ? (
+                    <Badge className={`${signalColorMap[buyTipStock.aiInsight.signal_color]} text-sm px-2 py-1`}>
+                      {buyTipStock.aiInsight.signal}
+                    </Badge>
+                  ) : (
+                    <span className="text-gray-400 text-xs">N/A</span>
+                  )}
+                </div>
               </div>
 
               {/* Key Metrics Section */}
@@ -193,6 +228,7 @@ export function BuyTipTab() {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         stock={selectedStock}
+        aiInsight={selectedStock ? aiInsights[selectedStock.ticker] : null}
         onSave={handleSavePortfolioItem}
       />
     </>

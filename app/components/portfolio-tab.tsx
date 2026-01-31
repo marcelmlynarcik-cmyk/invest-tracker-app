@@ -20,11 +20,21 @@ import {
 import { Label } from "../../components/ui/label";
 import { formatCZK, formatCurrency } from "@/lib/utils"
 import { useEffect, useState, useCallback, useMemo, useRef } from "react"
-import { UserStock } from "@/lib/types"
+import { UserStock, AiStockInsight } from "@/lib/types" // Import AiStockInsight
 import {
   Select,
   SelectItem,
 } from "@/components/ui/select"
+
+// Map signal colors to Tailwind CSS classes
+const signalColorMap: Record<AiStockInsight['signal_color'], string> = {
+  dark_green: 'bg-green-700 text-white',
+  green: 'bg-green-500 text-white',
+  gray: 'bg-gray-500 text-white',
+  orange: 'bg-orange-500 text-white',
+  red: 'bg-red-500 text-white',
+};
+
 import { EditPortfolioItemModal } from "@/app/components/edit-portfolio-item-modal"; // Import the new modal component
 
 type SortOption =
@@ -48,6 +58,7 @@ const LOCAL_STORAGE_KEY = 'portfolioManualOrder';
 export function PortfolioTab() {
   const [loading, setLoading] = useState(true)
   const [userStocks, setUserStocks] = useState<UserStock[]>([])
+  const [aiInsights, setAiInsights] = useState<Record<string, AiStockInsight>>({}); // Store AI insights by ticker
   const [sortOption, setSortOption] = useState<SortOption>('weight_desc');
   const [manualOrder, setManualOrder] = useState<string[]>([]);
   const [showEditModal, setShowEditModal] = useState(false); // State for modal visibility
@@ -66,11 +77,25 @@ export function PortfolioTab() {
         throw new Error(`API responded with status ${res.status}: ${await res.text()}`);
       }
       const stocksData: UserStock[] = await res.json();
-      console.log("Fetched stocksData:", stocksData); // Log the fetched data
+      console.log("Fetched stocksData:", stocksData);
       setUserStocks(stocksData || []);
+
+      // Fetch AI insights
+      const aiRes = await fetch('/api/ai/insights'); // Call the new batch AI insights endpoint
+      if (!aiRes.ok) {
+        throw new Error(`AI Insights API responded with status ${aiRes.status}: ${await aiRes.text()}`);
+      }
+      const insightsData: AiStockInsight[] = await aiRes.json();
+      const insightsMap = insightsData.reduce((acc, insight) => {
+        acc[insight.ticker] = insight;
+        return acc;
+      }, {} as Record<string, AiStockInsight>);
+      setAiInsights(insightsMap);
+
     } catch (error: any) {
-      console.error("Error fetching portfolio data:", error.message, error.stack, error)
+      console.error("Error fetching portfolio or AI data:", error.message, error.stack, error)
       setUserStocks([]);
+      setAiInsights({});
     } finally {
       setLoading(false)
     }
@@ -346,45 +371,15 @@ export function PortfolioTab() {
                   <TableHead>Zisk (CZK)</TableHead>
                   <TableHead>Zisk (%)</TableHead>
                   <TableHead>Váha (%)</TableHead>
+                  <TableHead className="text-right">AI Signál</TableHead> {/* New column for AI Signal */}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedUserStocks.map((stock) => (
-                  <TableRow key={stock.ticker} onClick={() => handleEditClick(stock)} className="cursor-pointer">
-                    <TableCell className="font-medium">{stock.ticker}</TableCell>
-                    <TableCell>{stock.name}</TableCell>
-                    <TableCell>
-                      {stock.shares.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency(stock.averagePrice, stock.currency)}
-                    </TableCell>
-                    <TableCell>{formatCZK(stock.currentValueCZK)}</TableCell>
-                    <TableCell
-                      className={
-                        stock.profitCZK > 0
-                          ? "text-green-500"
-                          : stock.profitCZK < 0
-                            ? "text-red-500"
-                            : ""
-                      }
-                    >
-                      {formatCZK(stock.profitCZK)}
-                    </TableCell>
-                    <TableCell
-                      className={
-                        stock.percentDiff > 0
-                          ? "text-green-500"
-                          : stock.percentDiff < 0
-                            ? "text-red-500"
-                            : ""
-                      }
-                    >
-                      {stock.percentDiff.toFixed(2)}%
-                    </TableCell>
-                    <TableCell>{stock.portfolioWeightPercent.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</TableCell>
-                  </TableRow>
-                ))}
+                {sortedUserStocks.map((stock) => {
+                  const insight = aiInsights[stock.ticker]; // Get insight for the stock
+                  return (<TableRow key={stock.ticker} onClick={() => handleEditClick(stock)} className="cursor-pointer"><TableCell className="font-medium">{stock.ticker}</TableCell>
+<TableCell>{stock.name}</TableCell><TableCell>{stock.shares.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}</TableCell><TableCell>{formatCurrency(stock.averagePrice, stock.currency)}</TableCell><TableCell>{formatCZK(stock.currentValueCZK)}</TableCell><TableCell className={stock.profitCZK > 0 ? "text-green-500" : stock.profitCZK < 0 ? "text-red-500" : ""}>{formatCZK(stock.profitCZK)}</TableCell><TableCell className={stock.percentDiff > 0 ? "text-green-500" : stock.percentDiff < 0 ? "text-red-500" : ""}>{stock.percentDiff.toFixed(2)}%</TableCell><TableCell>{stock.portfolioWeightPercent.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</TableCell><TableCell className="text-right">{insight && (<Badge className={`${signalColorMap[insight.signal_color]} text-xs px-2 py-1`}>{insight.signal}</Badge>)}{!insight && <span className="text-gray-400 text-xs">N/A</span>}</TableCell></TableRow>);
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -406,6 +401,7 @@ export function PortfolioTab() {
               : stock.percentDiff < 0
                 ? "text-red-500"
                 : "";
+          const insight = aiInsights[stock.ticker]; // Get insight for the stock
 
           return (
             <Card
@@ -431,7 +427,15 @@ export function PortfolioTab() {
                     {stock.ticker}
                   </p>
                 </div>
-                <Badge variant="secondary">{stock.currency}</Badge>
+                <div className="flex items-center space-x-2"> {/* Added flex container */}
+                  <Badge variant="secondary">{stock.currency}</Badge>
+                  {insight && (
+                    <Badge className={`${signalColorMap[insight.signal_color]} text-xs px-2 py-1`}>
+                      {insight.signal}
+                    </Badge>
+                  )}
+                  {!insight && <span className="text-gray-400 text-xs">N/A</span>}
+                </div>
               </div>
 
               <div className="mt-2 text-3xl font-bold">
@@ -477,6 +481,7 @@ export function PortfolioTab() {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         stock={selectedStock}
+        aiInsight={selectedStock ? aiInsights[selectedStock.ticker] : null} // Pass AI insight
         onSave={handleSavePortfolioItem}
       />
     </div>

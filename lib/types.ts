@@ -33,3 +33,15 @@ export interface UserStock {
   profitCZK: number; // M
 }
 
+export interface AiStockInsight {
+  id?: string; // Optional for when reading from cache
+  ticker: string;
+  signal: 'SILNÝ NÁKUP' | 'NÁKUP' | 'DRŽAŤ' | 'PREDAJ' | 'SILNÝ PREDAJ'; // Updated to Slovak
+  signal_color: 'dark_green' | 'green' | 'gray' | 'orange' | 'red';
+  general_summary: string;
+  personalized_summary: string;
+  confidence_level: 'low' | 'medium' | 'high';
+  generated_date: string; // YYYY-MM-DD - Renamed from created_at
+}
+
+
