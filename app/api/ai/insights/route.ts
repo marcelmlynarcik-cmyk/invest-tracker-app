@@ -166,7 +166,7 @@ export async function GET() { // Changed to GET as it will retrieve all insights
               personalized_summary: generated.personalized_summary,
               confidence_level: generated.confidence_level,
               generated_date: today, // Use generated_date
-            }, { onConflict: 'ticker' }) // Conflict on ticker to update existing
+            }, { onConflict: 'ticker,generated_date' }) // Conflict on ticker and generated_date to update existing
             .select('*')
             .single();
 
