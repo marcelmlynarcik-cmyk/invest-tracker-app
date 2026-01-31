@@ -2,27 +2,16 @@ import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { UserStock, AiStockInsight } from '@/lib/types';
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
+import { fetchStockDataFromSheets } from '@/lib/stock-data-utils'; // Import the utility function
 
-// Helper function to fetch all stock data
+// Helper function to fetch all stock data - now directly calls the utility
 async function getAllStockData(): Promise<UserStock[]> {
-  const stockApiUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/stocks`;
-  // console.log(`[AI Insights API] Fetching all stocks from: ${stockApiUrl}`); // Keep or remove based on final verbosity
   try {
-    const response = await fetch(stockApiUrl, {
-      headers: { 'Cache-Control': 'no-store', 'Pragma': 'no-cache', 'Expires': '0', 'Surrogate-Control': 'no-store' },
-      cache: 'no-store',
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = `Failed to fetch stock data: ${errorData.error || response.statusText}`;
-      console.error(`[AI Insights API] Failed to fetch stock data: ${errorMessage}`);
-      throw new Error(errorMessage);
-    }
-    const allStocks = await response.json();
-    // console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks.`); // Keep or remove based on final verbosity
+    const allStocks = await fetchStockDataFromSheets(); // Direct call to the utility function
+    console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks using direct function call.`);
     return allStocks;
   } catch (error) {
-    console.error(`[AI Insights API] Error in getAllStockData:`, error);
+    console.error(`[AI Insights API] Error in getAllStockData (direct call):`, error);
     throw error;
   }
 }
@@ -140,7 +129,7 @@ export async function GET() { // Changed to GET as it will retrieve all insights
   try {
     console.log('[AI Insights API] Starting batch insight generation process.');
     const allStocks = await getAllStockData();
-    console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks from /api/stocks.`);
+    console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks from internal utility.`);
     const allInsights: AiStockInsight[] = [];
 
     for (const stock of allStocks) {
