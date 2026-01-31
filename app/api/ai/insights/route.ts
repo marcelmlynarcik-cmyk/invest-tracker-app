@@ -14,8 +14,9 @@ async function getAllStockData(): Promise<UserStock[]> {
     });
     if (!response.ok) {
       const errorData = await response.json();
-      console.error(`[AI Insights API] Failed to fetch stock data: ${errorData.error || response.statusText}`);
-      throw new Error(`Failed to fetch stock data: ${errorData.error || response.statusText}`);
+      const errorMessage = `Failed to fetch stock data: ${errorData.error || response.statusText}`;
+      console.error(`[AI Insights API] Failed to fetch stock data: ${errorMessage}`);
+      throw new Error(errorMessage);
     }
     const allStocks = await response.json();
     // console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks.`); // Keep or remove based on final verbosity
@@ -91,6 +92,7 @@ VÝSTUPNÝ FORMÁT (LEN JSON):
   ];
 
   try {
+    console.log(`[AI Insights API] Calling Gemini API for ${stock.ticker}...`);
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: systemPrompt }] }, { role: 'user', parts: [{ text: userPrompt }] }],
       safetySettings,
@@ -100,8 +102,9 @@ VÝSTUPNÝ FORMÁT (LEN JSON):
         maxOutputTokens: 2048,
       }
     });
-
+    console.log(`[AI Insights API] Received response from Gemini API for ${stock.ticker}.`);
     const responseText = result.response.text();
+    console.log(`[AI Insights API] Gemini raw response text for ${stock.ticker}:`, responseText.substring(0, 500)); // Log first 500 chars
     let aiInsight;
     try {
       aiInsight = JSON.parse(responseText);
@@ -127,7 +130,7 @@ VÝSTUPNÝ FORMÁT (LEN JSON):
 export async function GET() { // Changed to GET as it will retrieve all insights
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
-    console.error('[AI Insights API] GEMINI_API_KEY is NOT set in environment variables.');
+    console.error('[AI Insights API] GEMINI_API_KEY is NOT set in environment variables. This is a critical configuration error.');
     return NextResponse.json({ error: 'AI service not configured. Please set GEMINI_API_KEY.' }, { status: 500 });
   }
 
@@ -135,7 +138,9 @@ export async function GET() { // Changed to GET as it will retrieve all insights
   const genAI = new GoogleGenerativeAI(geminiApiKey);
 
   try {
+    console.log('[AI Insights API] Starting batch insight generation process.');
     const allStocks = await getAllStockData();
+    console.log(`[AI Insights API] Successfully fetched ${allStocks.length} stocks from /api/stocks.`);
     const allInsights: AiStockInsight[] = [];
 
     for (const stock of allStocks) {
@@ -150,7 +155,7 @@ export async function GET() { // Changed to GET as it will retrieve all insights
         .single();
 
       if (cacheError && cacheError.code !== 'PGRST116') { // PGRST116 means no rows found (not an error for our logic)
-        console.error(`[AI Insights API] Supabase cache error for ${stock.ticker}:`, cacheError);
+        console.error(`[AI Insights API] Supabase cache lookup error for ${stock.ticker}:`, cacheError);
       }
 
       if (cachedInsight) {
@@ -184,7 +189,7 @@ export async function GET() { // Changed to GET as it will retrieve all insights
             console.log(`[AI Insights API] Successfully upserted new insight for ${stock.ticker}.`);
           }
         } catch (genError) {
-          console.error(`[AI Insights API] Failed to generate AI insight for ${stock.ticker}:`, genError);
+          console.error(`[AI Insights API] Failed to generate AI insight for ${stock.ticker} during generation process:`, genError);
           // If generation fails, we still want to proceed with other stocks
           // Optionally, add a placeholder or a default 'HOLD' insight
         }
@@ -194,10 +199,11 @@ export async function GET() { // Changed to GET as it will retrieve all insights
       }
     }
 
+    console.log(`[AI Insights API] Finished batch insight generation. Total insights: ${allInsights.length}`);
     return NextResponse.json(allInsights);
 
   } catch (error: any) {
-    console.error(`[AI Insights API] Unhandled error in batch insight generation:`, error);
+    console.error(`[AI Insights API] Unhandled critical error in batch insight generation process:`, error);
     return NextResponse.json(
       { error: 'Failed to generate batch AI stock insights due to an internal server error.' },
       { status: 500 }
