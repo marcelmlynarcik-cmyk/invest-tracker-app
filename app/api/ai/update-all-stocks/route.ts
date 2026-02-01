@@ -21,10 +21,20 @@ export async function GET(request: Request) {
         // 2. For each stock, call the AI insight generation function directly
         const insight: AiStockInsight = await generateInsightForStock(stock);
 
-        // 3. Save the result to Supabase
-        const { error } = await supabaseServer
+        // 3. Delete existing insight for the ticker and then insert the new one
+        const { error: deleteError } = await supabaseServer
           .from('ai_stock_insights')
-          .upsert({
+          .delete()
+          .eq('ticker', stock.ticker);
+
+        if (deleteError) {
+          console.error(`Error deleting existing insight for ${stock.ticker}:`, deleteError);
+          // Continue to insert even if delete fails, might be no existing record
+        }
+
+        const { error: insertError } = await supabaseServer
+          .from('ai_stock_insights')
+          .insert({
             ticker: stock.ticker,
             signal: insight.signal,
             signal_color: insight.signal_color,
@@ -32,10 +42,10 @@ export async function GET(request: Request) {
             personalized_summary: insight.personalized_summary,
             confidence_level: insight.confidence_level,
             generated_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-          }, { onConflict: 'ticker' });
+          });
 
-        if (error) {
-          console.error(`Error saving insight to Supabase for ${stock.ticker}:`, error);
+        if (insertError) {
+          console.error(`Error saving insight to Supabase for ${stock.ticker}:`, insertError);
         } else {
             console.log(`Successfully updated insight for ${stock.ticker}`);
         }
