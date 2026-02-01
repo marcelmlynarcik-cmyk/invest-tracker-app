@@ -6,11 +6,7 @@ import { AiStockInsight, UserStock } from '@/lib/types';
 
 // This is the new endpoint for the cron job.
 export async function GET(request: Request) {
-  // 1. Authorization
-  const cronSecret = request.headers.get('x-vercel-cron-secret');
-  if (cronSecret !== process.env.CRON_SECRET) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+
 
   try {
     // 2. Fetch all stocks from Google Sheets
