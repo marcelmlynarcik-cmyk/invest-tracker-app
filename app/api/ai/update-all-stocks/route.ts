@@ -7,8 +7,8 @@ import { AiStockInsight, UserStock } from '@/lib/types';
 // This is the new endpoint for the cron job.
 export async function GET(request: Request) {
   // 1. Authorization
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = request.headers.get('x-vercel-cron-secret');
+  if (cronSecret !== process.env.CRON_SECRET) {
     return new Response('Unauthorized', { status: 401 });
   }
 
