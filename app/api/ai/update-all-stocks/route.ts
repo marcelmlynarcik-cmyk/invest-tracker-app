@@ -5,7 +5,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { AiStockInsight, UserStock } from '@/lib/types';
 
 // This is the new endpoint for the cron job.
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   // 1. Authorization
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
