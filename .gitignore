@@ -82,3 +82,4 @@ yarn-error.log*
 next-env.d.ts
 # Google service account
 *.json
+!vercel.json
