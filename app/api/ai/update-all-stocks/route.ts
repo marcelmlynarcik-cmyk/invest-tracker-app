@@ -3,13 +3,14 @@ import { NextResponse } from 'next/server';
 import { fetchStockDataFromSheets } from '@/lib/stock-data-utils';
 import { supabaseServer } from '@/lib/supabase-server';
 import { AiStockInsight, UserStock } from '@/lib/types';
+import { generateInsightForStock } from '../stock-insight/route';
 
 // This is the new endpoint for the cron job.
 export async function GET(request: Request) {
 
 
   try {
-    // 2. Fetch all stocks from Google Sheets
+    // 1. Fetch all stocks from Google Sheets
     const stocks = await fetchStockDataFromSheets();
     if (!stocks || stocks.length === 0) {
       return NextResponse.json({ message: 'No stocks found, nothing to update.' });
@@ -17,24 +18,10 @@ export async function GET(request: Request) {
 
     const updatePromises = stocks.map(async (stock) => {
       try {
-        // 3. For each stock, call the AI insight generation endpoint
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/stock-insight`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ stock }),
-        });
+        // 2. For each stock, call the AI insight generation function directly
+        const insight: AiStockInsight = await generateInsightForStock(stock);
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.error(`Failed to get AI insight for ${stock.ticker}: ${response.status} ${response.statusText}`, errorBody);
-            return; // Skip this stock
-        }
-
-        const insight: AiStockInsight = await response.json();
-
-        // 4. Save the result to Supabase
+        // 3. Save the result to Supabase
         const { error } = await supabaseServer
           .from('ai_stock_insights')
           .upsert({

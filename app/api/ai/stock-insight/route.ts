@@ -21,10 +21,7 @@ async function getAnalystConsensus(ticker: string): Promise<string> {
 }
 
 
-export async function POST(request: Request) {
-  try {
-    const { stock }: { stock: UserStock } = await request.json();
-
+export async function generateInsightForStock(stock: UserStock): Promise<AiStockInsight> {
     const consensusPlaceholder = await getAnalystConsensus(stock.ticker);
 
     const prompt = `
@@ -73,7 +70,14 @@ export async function POST(request: Request) {
     }
 
     const aiInsight: AiStockInsight = JSON.parse(text);
+    return aiInsight;
+}
 
+
+export async function POST(request: Request) {
+  try {
+    const { stock }: { stock: UserStock } = await request.json();
+    const aiInsight = await generateInsightForStock(stock);
     return NextResponse.json(aiInsight);
 
   } catch (error: any) {
